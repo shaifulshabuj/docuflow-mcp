@@ -37,6 +37,8 @@ jobs:
             --exclude='.env' \
             --exclude='.docuflow/' \
             --exclude='*.log' \
+            --exclude='src' \
+            --exclude='tsconfig.json' \
             packages/ /tmp/release/packages/
 
           cp release/README.md /tmp/release/README.md
