@@ -1,1 +1,9 @@
 /.DS_Store
+/node_modules
+/dist
+/.env
+/.vscode
+/.idea
+*.log
+*.tmp
+*.bak
