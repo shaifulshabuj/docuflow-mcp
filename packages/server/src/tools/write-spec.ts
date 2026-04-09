@@ -1,7 +1,7 @@
 import path from "node:path";
-import { ensureDir, writeFileAtomic, readJsonIfExists } from "../filesystem.js";
+import { ensureDir, writeFileAtomic, readJsonIfExists } from "../filesystem";
 import fsp from "node:fs/promises";
-import { SpecIndex } from "../types.js";
+import { SpecIndex } from "../types";
 
 // Per-project write lock: maps projectPath → promise chain so that concurrent
 // calls to writeSpec on the same project are always serialised. This prevents

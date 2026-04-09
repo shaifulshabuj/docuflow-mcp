@@ -1,20 +1,7 @@
 {
-  "name": "docuflow-mcp",
-  "version": "0.1.0",
-  "description": "MCP server that lets AI agents read codebases and persist living specs. Zero AI calls inside the server.",
-  "type": "module",
-  "bin": {
-    "docuflow-mcp": "dist/index.js"
-  },
+  "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4"
-  },
-  "devDependencies": {
-    "typescript": "^5.6.0",
-    "@types/node": "^22.0.0"
+    "build": "npm run build --workspaces"
   }
 }

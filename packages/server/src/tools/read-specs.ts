@@ -1,7 +1,7 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { readJsonIfExists } from "../filesystem.js";
-import { SpecIndex } from "../types.js";
+import { readJsonIfExists } from "../filesystem";
+import { SpecIndex } from "../types";
 
 export async function readSpecs(input: { project_path: string; module_name?: string }) {
   const projectPath = path.resolve(input.project_path);

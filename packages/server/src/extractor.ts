@@ -1,4 +1,4 @@
-import { ExtractedFacts } from "./types.js";
+import { ExtractedFacts } from "./types";
 
 function uniq(arr: string[]): string[] {
   return Array.from(new Set(arr.filter((s) => s && s.length > 0)));

@@ -1,9 +1,45 @@
-/.DS_Store
-/node_modules
-/dist
-/.env
-/.vscode
-/.idea
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Database
+*.db
+*.db-journal
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Docuflow runtime output
+.docuflow/
+.mcp.json
+
+# Logs
 *.log
-*.tmp
-*.bak
+npm-debug.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Temporary
+tmp/
+temp/

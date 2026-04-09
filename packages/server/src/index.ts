@@ -6,10 +6,10 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { readModule } from "./tools/read-module.js";
-import { listModules } from "./tools/list-modules.js";
-import { writeSpec } from "./tools/write-spec.js";
-import { readSpecs } from "./tools/read-specs.js";
+import { readModule } from "./tools/read-module";
+import { listModules } from "./tools/list-modules";
+import { writeSpec } from "./tools/write-spec";
+import { readSpecs } from "./tools/read-specs";
 
 const server = new Server(
   { name: "docuflow", version: "0.1.0" },

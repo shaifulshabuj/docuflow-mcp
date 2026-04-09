@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+      - run: npm run build --workspaces
+
+      - name: Push to release repo
+        run: |
+          git config --global user.email "release-bot@doquflows.dev"
+          git config --global user.name "Docuflow Release Bot"
+
+          git clone \
+            https://x-access-token:${{ secrets.RELEASE_REPO_TOKEN }}@github.com/doquflows/docuflow.git \
+            /tmp/release
+
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='*.db' \
+            --exclude='.env' \
+            --exclude='.docuflow/' \
+            --exclude='*.log' \
+            packages/ /tmp/release/packages/
+
+          cp release/README.md /tmp/release/README.md
+          cp LICENSE /tmp/release/
+          cp release/CHANGELOG.md /tmp/release/CHANGELOG.md
+          cp package.json /tmp/release/
+          cp .gitignore /tmp/release/
+
+          cd /tmp/release
+          git add -A
+          git commit -m "Release ${{ github.ref_name }}" || echo "Nothing new to commit"
+          git tag -d ${{ github.ref_name }} 2>/dev/null || true
+          git push origin :refs/tags/${{ github.ref_name }} 2>/dev/null || true
+          git tag ${{ github.ref_name }}
+          git push origin main
+          git push origin ${{ github.ref_name }}
+
+      - name: Publish @doquflow/cli
+        run: npm publish --access public
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @doquflow/server
+        run: npm publish --access public
+        working-directory: packages/server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          repository: doquflows/docuflow
+          body_path: release/CHANGELOG.md
+          token: ${{ secrets.RELEASE_REPO_TOKEN }}

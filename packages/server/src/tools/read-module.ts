@@ -1,8 +1,8 @@
 import path from "node:path";
-import { safeReadFile } from "../filesystem.js";
-import { extensionToLanguage } from "../language-map.js";
-import { extract } from "../extractor.js";
-import { ModuleInfo } from "../types.js";
+import { safeReadFile } from "../filesystem";
+import { extensionToLanguage } from "../language-map";
+import { extract } from "../extractor";
+import { ModuleInfo } from "../types";
 
 const MAX_RAW = 8000;
 

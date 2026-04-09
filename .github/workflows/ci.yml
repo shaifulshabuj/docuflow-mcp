@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npm run build --workspaces
+      - name: Check for secrets
+        run: |
+          if grep -r "sk-ant\|ANTHROPIC_API_KEY\|npm_" \
+            packages/ --include="*.ts" --include="*.js"; then
+            echo "FAIL: Possible secret found in source"
+            exit 1
+          fi
+          echo "PASS: No secrets found"

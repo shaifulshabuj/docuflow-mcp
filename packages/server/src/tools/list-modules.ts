@@ -1,8 +1,8 @@
 import path from "node:path";
-import { walk, safeReadFile, SkipEntry } from "../filesystem.js";
-import { extensionToLanguage } from "../language-map.js";
-import { extract } from "../extractor.js";
-import { ListResult, ModuleInfo } from "../types.js";
+import { walk, safeReadFile, SkipEntry } from "../filesystem";
+import { extensionToLanguage } from "../language-map";
+import { extract } from "../extractor";
+import { ListResult, ModuleInfo } from "../types";
 
 export async function listModules(input: { path: string; extensions?: string[] }): Promise<ListResult> {
   const projectPath = path.resolve(input.path);
