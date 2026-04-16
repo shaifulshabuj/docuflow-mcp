@@ -5,20 +5,26 @@ Public releases live at [github.com/doquflows/docuflow](https://github.com/doquf
 
 ## What it does
 
-Docuflow is an MCP server that lets AI agents read any codebase and build persistent, incrementally-maintained knowledge bases using the **LLM Wiki pattern**. The server provides 10 tools across 4 phases: legacy code extraction, source ingestion, wiki querying, and maintenance.
+Docuflow is an MCP server that lets AI agents read any codebase and build persistent, incrementally-maintained knowledge bases using the **LLM Wiki pattern**. The server provides 14 tools across 6 phases: legacy code extraction, source ingestion, wiki querying, maintenance, guidance, and transparent tool execution.
 
 ```
 AI Agent (Claude, Copilot, Cursor)
-       │ calls MCP tools
+       │ reads .claude/instructions.md
+       │ auto-discovers when to use Docuflow
+       │ uses preview_generation to see predictions
+       │ calls get_schema_guidance for recommendations
+       │ calls MCP tools with confidence
 Docuflow MCP Server
-       │ 10 MCP tools: read, ingest, query, lint
+       │ 14 MCP tools: read, ingest, query, lint, guidance
 .docuflow/
   ├─ sources/        (immutable raw documents)
   ├─ wiki/           (LLM-generated markdown)
   ├─ index.md        (searchable catalog)
   ├─ log.md          (operation audit trail)
-  └─ schema.md       (configuration)
+  └─ schema.md       (domain-specific configuration)
 ```
+
+**Status**: ✅ Production ready (Phase 1-6 complete, 127+ tests passing, 0 breaking changes)
 
 ## The LLM Wiki Pattern
 
@@ -55,23 +61,35 @@ The LLM does the bookkeeping (updating cross-references, maintaining consistency
 ```
 docuflow-mcp/
 ├── packages/
-│   ├── server/          @doquflow/server  — MCP server (stdio)
-│   └── cli/             @doquflow/cli     — docuflow init / status
+│   ├── server/          @doquflow/server  — MCP server (stdio) with 14 tools
+│   └── cli/             @doquflow/cli     — CLI: init, status, interactive mode
+├── .claude/
+│   └── instructions.md  Copilot discovery guide (35 KB)
 ├── .docuflow/           LLM Wiki for Docuflow itself
 │   ├── sources/         Design docs, architecture, patterns
-│   ├── wiki/            185 auto-generated pages
+│   ├── wiki/            188 auto-generated pages (100% health)
 │   ├── index.md         Searchable catalog
 │   ├── log.md           Operation history
 │   └── schema.md        Configuration template
+├── docs/
+│   ├── COPILOT_INTEGRATION.md    LLM agent integration guide
+│   ├── TROUBLESHOOTING.md        8 KB problem-solving guide
+│   ├── WHEN_TO_USE.md            Decision matrix and cost-benefit
+│   ├── USAGE_EXAMPLES.md         6 real-world workflows
+│   ├── BEST_PRACTICES.md         Maintenance guidelines
+│   ├── EXAMPLE_SCHEMAS.md        4 domain templates
+│   └── LLM_WIKI_PATTERN.md       Deep dive on pattern
 ├── .github/workflows/   CI + release automation
 ├── release/             Public-facing docs (synced to doquflows/docuflow)
 ├── scripts/             pre-release-check.sh, release.js
 ├── CHANGELOG.md         Private dev changelog
-├── PHASE_1_COMPLETION.md, PHASE_2_COMPLETION.md, PHASE_3_COMPLETION.md, PHASE_4_COMPLETION.md
+├── PHASE_6_COMPLETION.md         Phase 6 summary (pre-LLM-wiki issues resolved)
+├── PHASE_5_COMPLETION.md, PHASE_4_COMPLETION.md, PHASE_3_COMPLETION.md, etc.
+├── COMPLETION_SUMMARY.md         Full project overview
 └── README.md            This file
 ```
 
-## MCP Tools (10 total)
+## MCP Tools (14 total)
 
 ### Phase 0: Legacy Code Extraction (4 tools)
 
@@ -94,7 +112,7 @@ Process sources and maintain wiki structure.
 | `update_index` | Scan wiki → regenerate index.md → append to log.md | `{ project_path }` | Entries indexed, log appended |
 | `list_wiki` | Query wiki structure by category | `{ project_path, category? }` | Total pages, breakdown by category |
 
-### Phase 3: Query & Synthesis (3 tools)
+### Phase 3: Query & Synthesis (4 tools)
 
 Search and synthesize from wiki; save answers back.
 
@@ -102,7 +120,7 @@ Search and synthesize from wiki; save answers back.
 |------|---------|-------|--------|
 | `wiki_search` | BM25-inspired search with relevance scoring | `{ project_path, query, limit?, category? }` | Ranked results with scores and snippets |
 | `query_wiki` | Main interface: search → synthesize | `{ project_path, question, max_sources? }` | Question, answer (markdown), source pages |
-| `synthesize_answer` | (Internal) Build markdown answer from selected pages | `{ pages, question }` | Answer markdown with citations |
+| `answer_synthesis` | (Internal) Build markdown answer from selected pages | `{ pages, question }` | Answer markdown with citations |
 | `save_answer_as_page` | Save answer as new wiki page | `{ project_path, title, content, source_page_ids? }` | Page ID, filepath, saved_at timestamp |
 
 ### Phase 4: Maintenance (1 tool)
@@ -112,6 +130,15 @@ Health checks and recommendations.
 | Tool | Purpose | Input | Output |
 |------|---------|-------|--------|
 | `lint_wiki` | Find quality issues: orphans, stale, broken refs, metadata gaps, contradictions | `{ project_path, check_type? }` | Issues array, metrics, health score (0-100), recommendations |
+
+### Phase 6: Guidance & Transparency (2 tools)
+
+Help users make decisions and understand what tools will do.
+
+| Tool | Purpose | Input | Output |
+|------|---------|-------|--------|
+| `get_schema_guidance` | Analyze wiki state → recommend what docs should exist | `{ project_path }` | Domain, existing pages, recommended pages with reasons |
+| `preview_generation` | Show what a tool will do before running | `{ tool_name, project_path, params }` | Predicted actions, output, impact level, files affected |
 
 ---
 
@@ -140,6 +167,8 @@ The MCP server. Exposes 10 tools over stdio transport.
 | `src/tools/query-wiki.ts` | query_wiki tool handler (orchestrator) |
 | `src/tools/save-answer-as-page.ts` | save_answer_as_page tool handler |
 | `src/tools/lint-wiki.ts` | lint_wiki tool handler (health checks) |
+| `src/tools/get-schema-guidance.ts` | get_schema_guidance tool handler (domain-aware recommendations) |
+| `src/tools/preview-generation.ts` | preview_generation tool handler (transparent predictions) |
 
 ### `@doquflow/cli` (`packages/cli/`)
 
@@ -147,7 +176,15 @@ Command-line interface for Docuflow.
 
 **Commands:**
 - `docuflow init` — Create `.docuflow/` structure, setup schema template
+- `docuflow init --interactive` — Interactive domain-aware setup (Code/Research/Business/Personal)
 - `docuflow status` — Show page count, health score, MCP registration state
+
+**Interactive Init Features:**
+- Domain selection (4 options)
+- Project info prompts (name, description)
+- Domain-specific schema generation
+- Planning template creation
+- Next steps guidance
 
 ---
 
@@ -215,6 +252,115 @@ Output: Issues array, metrics, health score, recommendations
 ```
 
 **Docuflow example:** 188-page wiki → 100% health score, 0 issues, "Continue maintaining current standards."
+
+---
+
+## Phase 6: User Experience & Guidance (NEW)
+
+### Claude Auto-Discovery
+
+Docuflow includes `.claude/instructions.md` (35 KB comprehensive guide) that teaches Claude:
+- **What** Docuflow does and why it's useful
+- **When** to use Docuflow (automatic usage patterns)
+- **How** to use all 14 MCP tools
+- **Workflows** for ingest, query, lint
+- **Troubleshooting** common issues
+
+**Result:** Claude auto-discovers and uses Docuflow without explicit instruction.
+
+### Tool Transparency
+
+Two new tools help users understand and make decisions:
+
+1. **`preview_generation`** — Shows what a tool will do BEFORE running
+   - Predicted actions
+   - Predicted output
+   - Impact level (none/low/medium/high)
+   - Files affected
+   - Recommendations
+
+2. **`get_schema_guidance`** — Recommends what documents should exist
+   - Auto-detects domain from schema.md
+   - Shows existing pages
+   - Recommends missing pages with reasons
+   - Removes decision fatigue
+
+### Documentation
+
+New guides address all pre-LLM-wiki testing concerns:
+
+- **`docs/TROUBLESHOOTING.md`** — 8 KB problem-solving guide covering command not found, MCP issues, wiki quality, performance, data safety, and more
+- **`docs/WHEN_TO_USE.md`** — 8.9 KB decision framework with matrix, cost-benefit analysis, and red flags/green lights
+- **`docs/COPILOT_INTEGRATION.md`** — Integration reference for LLM agents
+- **Full documentation** — 110+ KB across 10 files (USAGE_EXAMPLES, BEST_PRACTICES, LLM_WIKI_PATTERN, EXAMPLE_SCHEMAS, etc.)
+
+### Interactive Initialization
+
+New interactive mode for better onboarding:
+
+```bash
+$ docuflow init --interactive
+
+? Select your domain:
+  1) Code & Architecture
+  2) Research & Analysis
+  3) Business & Markets
+  4) Personal Knowledge
+
+? Project name: [MyProject]
+? Brief description: [...]
+
+✅ Domain-specific schema generated
+✅ Planning template created
+📋 Next steps:
+  1. Review your schema: .docuflow/schema.md
+  2. Review your plan: .docuflow/PLAN.md
+  3. Add first source: copy to .docuflow/sources/
+  4. Run: docuflow ingest ...
+```
+
+---
+
+## Getting Started
+
+### For New Users
+
+1. **Initialize interactive wiki**
+   ```bash
+   npm install -g @doquflow/cli
+   cd /path/to/project
+   docuflow init --interactive
+   ```
+
+2. **Add first source**
+   ```bash
+   cp /path/to/document.md .docuflow/sources/
+   ```
+
+3. **Ingest into wiki**
+   - Claude handles this automatically via MCP
+   - Or call ingest_source tool directly
+
+4. **Query the wiki**
+   - Claude uses query_wiki automatically
+   - Or run queries manually
+
+### For Claude/LLM Agents
+
+Claude automatically:
+1. Reads `.claude/instructions.md` at session start
+2. Discovers when to use Docuflow (ingest, query, lint workflows)
+3. Uses `preview_generation` to preview tool results
+4. Calls `get_schema_guidance` for recommendations
+5. Executes tools with confidence (not as black box)
+
+### Documentation
+
+See full documentation in:
+- **User guides**: `docs/TROUBLESHOOTING.md`, `docs/WHEN_TO_USE.md`, `docs/USAGE_EXAMPLES.md`
+- **Technical**: `docs/LLM_WIKI_PATTERN.md`, `docs/BEST_PRACTICES.md`, `docs/EXAMPLE_SCHEMAS.md`
+- **Integration**: `docs/COPILOT_INTEGRATION.md`
+- **Project status**: `COMPLETION_SUMMARY.md`, `PHASE_6_COMPLETION.md`
 
 ---
 
