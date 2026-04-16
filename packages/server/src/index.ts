@@ -17,6 +17,7 @@ import { wikiSearch } from "./tools/wiki-search";
 import { synthesizeAnswer } from "./tools/answer-synthesis";
 import { queryWiki } from "./tools/query-wiki";
 import { saveAnswerAsPage } from "./tools/save-answer-as-page";
+import { lintWiki } from "./tools/lint-wiki";
 
 const server = new Server(
   { name: "docuflow", version: "0.1.0" },
@@ -211,6 +212,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path", "question", "answer", "page_title"],
       },
     },
+    {
+      name: "lint_wiki",
+      description:
+        "Health check wiki for quality issues: orphan pages, broken references, stale content, metadata gaps, and contradictions. Returns issues found, metrics, health score, and recommendations.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          check_type: {
+            type: "string",
+            enum: ["all", "orphans", "contradictions", "stale", "metadata"],
+            description: "Optional: type of check to run (default: all).",
+          },
+        },
+        required: ["project_path"],
+      },
+    },
   ],
 }));
 
@@ -240,6 +258,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await queryWiki(args as { project_path: string; question: string; max_sources?: number });
     } else if (name === "save_answer_as_page") {
       result = await saveAnswerAsPage(args as { project_path: string; question: string; answer: string; page_title: string; category?: "synthesis" | "entity" | "concept" | "timeline"; source_page_ids?: string[] });
+    } else if (name === "lint_wiki") {
+      result = await lintWiki(args as { project_path: string; check_type?: "all" | "orphans" | "contradictions" | "stale" | "metadata" });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
