@@ -32,3 +32,50 @@ export interface SpecIndexEntry {
 export interface SpecIndex {
   specs: SpecIndexEntry[];
 }
+
+// ============================================================
+// LLM Wiki Extensions (Phase 1+)
+// ============================================================
+
+export interface WikiPageFrontmatter {
+  created_at: string;
+  updated_at: string;
+  sources: string[];
+  tags: string[];
+  inbound_links: string[];
+  outbound_links: string[];
+}
+
+export interface WikiPage {
+  id: string;
+  title: string;
+  category: "entity" | "concept" | "timeline" | "synthesis" | "index" | "log";
+  content: string;
+  frontmatter: WikiPageFrontmatter;
+}
+
+export interface IngestResult {
+  source_id: string;
+  summary: string;
+  pages_created: string[];
+  pages_updated: string[];
+  entities_discovered: string[];
+  contradictions: Array<{ page: string; issue: string }>;
+}
+
+export interface QueryResult {
+  answer: string;
+  source_pages: string[];
+  confidence: number;
+  new_page_created?: string;
+}
+
+export interface LintResult {
+  issues: Array<{ type: string; page: string; detail: string }>;
+  metrics: {
+    orphans: number;
+    missing_refs: number;
+    contradictions: number;
+  };
+  recommendations: string[];
+}
