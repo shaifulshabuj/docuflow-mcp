@@ -2,6 +2,6 @@
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build --workspaces"
+    "build": "npm run build -w packages/server && npm run build -w packages/cli"
   }
 }

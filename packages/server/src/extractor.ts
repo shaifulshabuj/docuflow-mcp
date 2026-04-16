@@ -40,6 +40,12 @@ const RE_MIN_API = /\bapp\.Map(?:Get|Post|Put|Delete|Patch)\s*\(\s*["']([^"']+)[
 const RE_EXPRESS = /\b(?:router|app)\.(?:get|post|put|delete|patch|use)\s*\(\s*['"]([^'"]+)['"]/g;
 const RE_NEST = /@(?:Get|Post|Put|Delete|Patch)\s*\(\s*['"]([^'"]+)['"]/g;
 const RE_NG_PATH = /\bpath\s*:\s*['"]([^'"]+)['"]/g;
+// Flask: @app.route('/path') @bp.route('/path')
+const RE_FLASK = /@\w+\.route\s*\(\s*['"]([^'"]+)['"]/g;
+// FastAPI / Flask-style: @app.get('/x') @router.post('/x')
+const RE_FASTAPI = /@(?:app|router|bp)\s*\.\s*(?:get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]/g;
+// Django: path('url/', view) url('pattern/', view)
+const RE_DJANGO = /\bpath\s*\(\s*['"]([^'"]+)['"]/g;
 
 const RE_CFG_CONNSTR = /\bConnectionStrings:([\w.]+)/g;
 const RE_PROCESS_ENV = /\bprocess\.env\.([A-Z_][A-Z0-9_]*)/g;
@@ -105,6 +111,9 @@ export function extract(content: string): ExtractedFacts {
     ...collect(new RegExp(RE_EXPRESS.source, "g"), content),
     ...collect(new RegExp(RE_NEST.source, "g"), content),
     ...collect(new RegExp(RE_NG_PATH.source, "g"), content),
+    ...collect(new RegExp(RE_FLASK.source, "g"), content),
+    ...collect(new RegExp(RE_FASTAPI.source, "g"), content),
+    ...collect(new RegExp(RE_DJANGO.source, "g"), content),
   ]);
 
   const config_refs: string[] = [];
