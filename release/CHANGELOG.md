@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2026-04-16
+
+### Added
+- (Add your changes here)
+
+### Changed
+- (Add your changes here)
+
+### Fixed
+- (Add your changes here)
+
+
 ## [0.2.0] - 2026-04-16
 
 ### Added
