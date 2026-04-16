@@ -1,5 +1,17 @@
 # Docuflow Changelog
 
+## [0.2.0] - 2026-04-16
+
+### Added
+- (Add your changes here)
+
+### Changed
+- (Add your changes here)
+
+### Fixed
+- (Add your changes here)
+
+
 This file documents every version of Docuflow: what was built, what the original
 spec asked for, what broke during testing, and how it was fixed. Each entry is
 written so a human or AI agent can understand not just *what* changed but *why*.
