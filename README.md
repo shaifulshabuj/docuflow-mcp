@@ -284,3 +284,5 @@ Interactive script handles: version bump → changelog → git commit → tag �
 - [Best Practices](./docs/BEST_PRACTICES.md) — Maintaining wikis
 - [Example Schemas](./docs/EXAMPLE_SCHEMAS.md) — Domain-specific configuration
 - [Copilot Integration](./docs/COPILOT_INTEGRATION.md) — How Claude auto-discovers docuflow
+- [When to Use](./docs/WHEN_TO_USE.md) — Decision tree and cost-benefit
+- [Troubleshooting](./docs/TROUBLESHOOTING.md) — Common issues and fixes
