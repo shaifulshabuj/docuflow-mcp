@@ -94,7 +94,36 @@ node packages/cli/dist/index.js init # register in Claude Desktop config
 > The CI workflow publishes whatever version is in `package.json` at tag time.
 > If you tag before bumping, npm publishes the old version and the release tag is out of sync.
 
-### Release checklist
+### Automated release with script
+
+```bash
+npm run release
+```
+
+This interactive script automates the entire release process:
+1. Prompts for version bump type (major / minor / patch)
+2. Bumps versions in both package.json files
+3. Syncs the `@doquflow/server` dependency in CLI package
+4. Updates CHANGELOG.md (private) and release/CHANGELOG.md (public)
+5. Regenerates package-lock.json
+6. Runs pre-release checks
+7. Creates git commit + tag
+8. Pushes to origin
+
+**Example:**
+```bash
+$ npm run release
+? Select version bump (major/minor/patch): patch
+Current: 0.1.1 → Next: 0.1.2
+✓ Commit created
+✓ Tag created: v0.1.2
+✓ Pushed to origin
+✅ Release v0.1.2 complete!
+```
+
+### Manual release (legacy)
+
+If you prefer manual control, follow these steps:
 
 1. Edit `packages/server/package.json` → bump `version`
 2. Edit `packages/cli/package.json` → bump `version` AND update `@doquflow/server` dep version

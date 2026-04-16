@@ -18,9 +18,15 @@ npm run build -w packages/cli
 bash scripts/pre-release-check.sh
 ```
 
+**Automated release** (bump version + push tag):
+```bash
+npm run release
+```
+
 The project uses **TypeScript** with no test suite — validation happens via:
 - TypeScript compiler (`tsc`)
 - Pre-release checks in `scripts/pre-release-check.sh` (builds, secrets scan, file integrity)
+- Release script in `scripts/release.js` (interactive version bumping + changelog generation)
 - GitHub Actions CI on every push/PR
 
 ## High-Level Architecture
@@ -112,13 +118,22 @@ The extractor is **language-agnostic** — it uses line-matching regex patterns,
 
 ### Version Management & Release
 
-**Critical rule: Always bump versions in package.json BEFORE creating a git tag.**
+**Use the automated release script** (recommended):
+```bash
+npm run release
+```
 
-The CI publishes whatever version is in `package.json` at tag time. If you tag before bumping, npm publishes the old version and release tags get out of sync.
+This interactive script handles version bumping, changelog updates, pre-release checks, git operations, and pushes — all in one command. See [RELEASE.md](../RELEASE.md) for detailed documentation.
 
-**Release checklist:**
-1. Update `packages/server/package.json` → `version`
-2. Update `packages/cli/package.json` → `version` AND `@doquflow/server` dependency version
+**Manual release** (legacy approach):
+If you need manual control, the critical rule remains:
+
+> **Always bump versions in package.json BEFORE creating a git tag.**
+> The CI publishes whatever version is in `package.json` at tag time.
+
+Manual steps:
+1. Edit `packages/server/package.json` → bump `version`
+2. Edit `packages/cli/package.json` → bump `version` AND `@doquflow/server` dep version
 3. Update `CHANGELOG.md` (private) and `release/CHANGELOG.md` (public)
 4. Run `npm install --package-lock-only` to regenerate lockfile
 5. Run `bash scripts/pre-release-check.sh` → must show `RESULT: PASSED`
