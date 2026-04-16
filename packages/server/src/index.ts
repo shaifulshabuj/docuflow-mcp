@@ -13,6 +13,10 @@ import { readSpecs } from "./tools/read-specs";
 import { ingestSource } from "./tools/ingest-source";
 import { updateIndex } from "./tools/update-index";
 import { listWiki } from "./tools/list-wiki";
+import { wikiSearch } from "./tools/wiki-search";
+import { synthesizeAnswer } from "./tools/answer-synthesis";
+import { queryWiki } from "./tools/query-wiki";
+import { saveAnswerAsPage } from "./tools/save-answer-as-page";
 
 const server = new Server(
   { name: "docuflow", version: "0.1.0" },
@@ -125,6 +129,88 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path"],
       },
     },
+    {
+      name: "wiki_search",
+      description:
+        "Search the wiki for pages matching a query using relevance scoring. Returns ranked results with preview snippets and matched terms. BM25-inspired ranking weights entity pages higher.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          query: { type: "string", description: "Search query (e.g., 'MCP protocol design')." },
+          limit: {
+            type: "number",
+            description: "Optional: max results to return (default: 10).",
+          },
+          category: {
+            type: "string",
+            enum: ["entity", "concept", "timeline", "synthesis"],
+            description: "Optional: filter to a specific category.",
+          },
+        },
+        required: ["project_path", "query"],
+      },
+    },
+    {
+      name: "synthesize_answer",
+      description:
+        "Generate a synthesis answer from multiple wiki pages. Extracts relevant sentences, key concepts, and builds a markdown answer with citations.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          query: { type: "string", description: "The question being answered." },
+          source_page_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of wiki page IDs to synthesize from.",
+          },
+        },
+        required: ["project_path", "query", "source_page_ids"],
+      },
+    },
+    {
+      name: "query_wiki",
+      description:
+        "Ask a question against the wiki. Automatically searches for relevant pages, synthesizes an answer, and returns source pages with confidence score. One-stop tool for querying accumulated knowledge.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          question: { type: "string", description: "The question to ask (e.g., 'How does the MCP protocol work?')." },
+          max_sources: {
+            type: "number",
+            description: "Optional: max source pages to use in synthesis (default: 5).",
+          },
+        },
+        required: ["project_path", "question"],
+      },
+    },
+    {
+      name: "save_answer_as_page",
+      description:
+        "Save a generated answer as a new wiki page. Allows query results to compound back into the knowledge base, growing the wiki with new synthesis pages. Automatically adds frontmatter and updates log.md.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          question: { type: "string", description: "The original question that was answered." },
+          answer: { type: "string", description: "The markdown answer text to save." },
+          page_title: { type: "string", description: "Title for the new page (e.g., 'How MCP Protocol Works')." },
+          category: {
+            type: "string",
+            enum: ["synthesis", "entity", "concept", "timeline"],
+            description: "Optional: wiki category for the page (default: synthesis).",
+          },
+          source_page_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional: list of source wiki page IDs used to generate this answer.",
+          },
+        },
+        required: ["project_path", "question", "answer", "page_title"],
+      },
+    },
   ],
 }));
 
@@ -146,6 +232,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await updateIndex(args as { project_path: string });
     } else if (name === "list_wiki") {
       result = await listWiki(args as { project_path: string; category?: "entity" | "concept" | "timeline" | "synthesis" });
+    } else if (name === "wiki_search") {
+      result = await wikiSearch(args as { project_path: string; query: string; limit?: number; category?: "entity" | "concept" | "timeline" | "synthesis" });
+    } else if (name === "synthesize_answer") {
+      result = await synthesizeAnswer(args as { project_path: string; query: string; source_page_ids: string[] });
+    } else if (name === "query_wiki") {
+      result = await queryWiki(args as { project_path: string; question: string; max_sources?: number });
+    } else if (name === "save_answer_as_page") {
+      result = await saveAnswerAsPage(args as { project_path: string; question: string; answer: string; page_title: string; category?: "synthesis" | "entity" | "concept" | "timeline"; source_page_ids?: string[] });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
