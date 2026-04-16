@@ -283,3 +283,4 @@ Interactive script handles: version bump → changelog → git commit → tag �
 - [Usage Examples](./docs/USAGE_EXAMPLES.md) — Workflows with real output
 - [Best Practices](./docs/BEST_PRACTICES.md) — Maintaining wikis
 - [Example Schemas](./docs/EXAMPLE_SCHEMAS.md) — Domain-specific configuration
+- [Copilot Integration](./docs/COPILOT_INTEGRATION.md) — How Claude auto-discovers docuflow
