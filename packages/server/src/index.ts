@@ -18,6 +18,8 @@ import { synthesizeAnswer } from "./tools/answer-synthesis";
 import { queryWiki } from "./tools/query-wiki";
 import { saveAnswerAsPage } from "./tools/save-answer-as-page";
 import { lintWiki } from "./tools/lint-wiki";
+import { getSchemataGuidance } from "./tools/get-schema-guidance";
+import { previewGeneration } from "./tools/preview-generation";
 
 const server = new Server(
   { name: "docuflow", version: "0.1.0" },
@@ -229,6 +231,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path"],
       },
     },
+    {
+      name: "get_schema_guidance",
+      description:
+        "Analyze what documents should exist based on project schema and current wiki. Removes decision fatigue by suggesting what to create next.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          domain: {
+            type: "string",
+            description: "Optional: domain hint (Code/Architecture, Research, Business, Personal). Auto-detected if not provided.",
+          },
+        },
+        required: ["project_path"],
+      },
+    },
+    {
+      name: "preview_generation",
+      description:
+        "Preview what a tool will generate before running it. Removes black-box feeling by showing predicted actions, outputs, and impact.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          tool_name: { type: "string", description: "Name of the tool to preview (e.g., ingest_source, query_wiki)." },
+          project_path: { type: "string", description: "Root of the project." },
+          params: { type: "object", description: "Parameters you would pass to that tool." },
+        },
+        required: ["tool_name", "project_path", "params"],
+      },
+    },
   ],
 }));
 
@@ -260,6 +292,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await saveAnswerAsPage(args as { project_path: string; question: string; answer: string; page_title: string; category?: "synthesis" | "entity" | "concept" | "timeline"; source_page_ids?: string[] });
     } else if (name === "lint_wiki") {
       result = await lintWiki(args as { project_path: string; check_type?: "all" | "orphans" | "contradictions" | "stale" | "metadata" });
+    } else if (name === "get_schema_guidance") {
+      result = await getSchemataGuidance(args as { project_path: string; domain?: string });
+    } else if (name === "preview_generation") {
+      result = await previewGeneration(args as { tool_name: string; project_path: string; params: Record<string, any> });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
