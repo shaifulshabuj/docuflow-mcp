@@ -23,6 +23,10 @@ function getVSCodeMcpConfigPath(): string {
   return path.join(os.homedir(), ".config", "Code", "User", "mcp.json");
 }
 
+function getCopilotCliMcpConfigPath(): string {
+  return path.join(os.homedir(), ".copilot", "mcp-config.json");
+}
+
 function resolveServerBin(): string {
   // Try npm-installed package first
   try {
@@ -153,6 +157,7 @@ async function writeClaudeMd(projectDir: string): Promise<void> {
 export async function run(): Promise<void> {
   const configPath = getClaudeDesktopConfigPath();
   const vscodeConfigPath = getVSCodeMcpConfigPath();
+  const copilotCliConfigPath = getCopilotCliMcpConfigPath();
   const serverBin = resolveServerBin();
   const nodeBin = process.execPath;
 
@@ -188,6 +193,25 @@ export async function run(): Promise<void> {
     // VS Code not installed or config dir not writable — skip silently
   }
 
+  // Register in GitHub Copilot CLI MCP config (~/.copilot/mcp-config.json)
+  let copilotCliRegistered = false;
+  let copilotCliConfig: Record<string, any> = {};
+  try {
+    const raw = await fsp.readFile(copilotCliConfigPath, "utf8");
+    copilotCliConfig = JSON.parse(raw);
+  } catch {
+    // File may not exist yet
+  }
+  if (!copilotCliConfig.mcpServers) copilotCliConfig.mcpServers = {};
+  copilotCliConfig.mcpServers.docuflow = { type: "local", command: nodeBin, args: [serverBin], tools: ["*"] };
+  try {
+    await fsp.mkdir(path.dirname(copilotCliConfigPath), { recursive: true });
+    await fsp.writeFile(copilotCliConfigPath, JSON.stringify(copilotCliConfig, null, 2) + "\n", "utf8");
+    copilotCliRegistered = true;
+  } catch {
+    // Copilot CLI not installed — skip silently
+  }
+
   // Create .docuflow/ directory structure
   const projectDir = process.cwd();
   const docuflowDir = path.join(projectDir, ".docuflow");
@@ -214,6 +238,26 @@ export async function run(): Promise<void> {
   // Generate CLAUDE.md so Claude Code picks up DocuFlow automatically
   await writeClaudeMd(projectDir);
 
+  // Write .vscode/mcp.json for project-level workspace MCP config (shareable via git)
+  // Uses npx so it works on any machine — safe to commit
+  const vscodeDirPath = path.join(projectDir, ".vscode");
+  const vscodeWorkspaceMcpPath = path.join(vscodeDirPath, "mcp.json");
+  let workspaceMcpConfig: Record<string, any> = {};
+  try {
+    const raw = await fsp.readFile(vscodeWorkspaceMcpPath, "utf8");
+    workspaceMcpConfig = JSON.parse(raw);
+  } catch {
+    // File doesn't exist yet
+  }
+  if (!workspaceMcpConfig.servers) workspaceMcpConfig.servers = {};
+  workspaceMcpConfig.servers.docuflow = {
+    command: "npx",
+    args: ["-y", "-p", "@doquflow/server", "docuflow-server"],
+    type: "stdio",
+  };
+  await fsp.mkdir(vscodeDirPath, { recursive: true });
+  await fsp.writeFile(vscodeWorkspaceMcpPath, JSON.stringify(workspaceMcpConfig, null, 2) + "\n", "utf8");
+
   // Add .docuflow/ to .gitignore if present and not already listed
   const gitignorePath = path.join(process.cwd(), ".gitignore");
   if (fs.existsSync(gitignorePath)) {
@@ -223,32 +267,33 @@ export async function run(): Promise<void> {
     }
   }
 
-  console.log("✓ Docuflow initialised successfully.");
+  console.log("\u2713 DocuFlow initialised successfully.");
   console.log("");
-  console.log("📁 Structure created:");
+  console.log("\ud83d\udcc1 Structure created:");
   console.log(`  ${docuflowDir}/`);
-  console.log(`  ├── specs/              (for legacy specs)`);
-  console.log(`  ├── wiki/               (LLM-generated pages)`);
-  console.log(`  │   ├── entities/`);
-  console.log(`  │   ├── concepts/`);
-  console.log(`  │   ├── timelines/`);
-  console.log(`  │   └── syntheses/`);
-  console.log(`  ├── sources/            (immutable raw files)`);
-  console.log(`  ├── schema.md           (wiki configuration)`);
-  console.log(`  ├── index.md            (auto-maintained catalog)`);
-  console.log(`  └── log.md              (operation log)`);
+  console.log(`  \u251c\u2500\u2500 specs/              (code specs written by the agent)`);
+  console.log(`  \u251c\u2500\u2500 wiki/               (LLM-generated wiki pages)`);
+  console.log(`  \u2502   \u251c\u2500\u2500 entities/`);
+  console.log(`  \u2502   \u251c\u2500\u2500 concepts/`);
+  console.log(`  \u2502   \u251c\u2500\u2500 timelines/`);
+  console.log(`  \u2502   \u2514\u2500\u2500 syntheses/`);
+  console.log(`  \u251c\u2500\u2500 sources/            (raw markdown documents to ingest)`);
+  console.log(`  \u251c\u2500\u2500 schema.md           (wiki configuration)`);
+  console.log(`  \u251c\u2500\u2500 index.md            (auto-maintained catalog)`);
+  console.log(`  \u2514\u2500\u2500 log.md              (operation log)`);
   console.log("");
-  console.log("📝 CLAUDE.md:");
+  console.log("\ud83d\udcdd CLAUDE.md:");
   console.log(`  Generated at: ${path.join(projectDir, "CLAUDE.md")}`);
-  console.log(`  Claude Code will automatically read DocuFlow tool instructions.`);
+  console.log(`  Claude Code reads DocuFlow tool instructions automatically.`);
   console.log("");
-  console.log("🔧 MCP Configuration:");
-  console.log(`  Claude Desktop: ✓ registered`);
-  console.log(`  GitHub Copilot: ${vscodeRegistered ? "✓ registered" : "— VS Code not detected (add manually to .vscode/mcp.json)"}`);
+  console.log("\ud83d\udd27 MCP Registration:");
+  console.log(`  Claude Desktop:  \u2713 registered`);
+  console.log(`  VS Code Copilot: ${vscodeRegistered ? "\u2713 registered (user-level)" : "\u2014 not detected"}`);
+  console.log(`  Copilot CLI:     ${copilotCliRegistered ? "\u2713 registered (~/.copilot/mcp-config.json)" : "\u2014 not detected"}`);
+  console.log(`  Workspace:       \u2713 .vscode/mcp.json written (commit to share with team)`);
   console.log("");
-  console.log("📖 Next steps:");
-  console.log("  1. Edit .docuflow/schema.md to customize your wiki");
-  console.log("  2. Add source files to .docuflow/sources/");
-  console.log("  3. Use DocuFlow tools to ingest, query, and maintain wiki");
-  console.log("  4. Restart Claude Desktop / reload VS Code window to activate");
+  console.log("\ud83d\udcd6 Next steps:");
+  console.log("  1. Edit .docuflow/schema.md to customize your wiki domain");
+  console.log("  2. Add markdown docs to .docuflow/sources/ then ingest them");
+  console.log("  3. Restart Claude Desktop / reload VS Code / restart Copilot CLI");
 }
