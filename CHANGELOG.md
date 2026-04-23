@@ -1,6 +1,13 @@
 # Docuflow Changelog
 
-## [0.4.5] - 2026-04-23
+## [0.4.6] - 2026-04-23
+
+### Added
+- `docuflow init` now registers DocuFlow in **OpenAI Codex CLI** (`~/.codex/config.toml`) — DocuFlow MCP tools available in every Codex session automatically
+- `docuflow init` now generates **AGENTS.md** in the project root — Codex reads tool instructions automatically (same as CLAUDE.md for Claude Code)
+- `docuflow init` output now shows all 5 registration targets including Codex CLI and AGENTS.md
+
+
 
 ### Added
 - `docuflow init` now registers DocuFlow in **GitHub Copilot CLI** (`~/.copilot/mcp-config.json`) — DocuFlow tools available in `gh copilot` agent mode automatically

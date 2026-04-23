@@ -27,6 +27,10 @@ function getCopilotCliMcpConfigPath(): string {
   return path.join(os.homedir(), ".copilot", "mcp-config.json");
 }
 
+function getCodexConfigPath(): string {
+  return path.join(os.homedir(), ".codex", "config.toml");
+}
+
 function resolveServerBin(): string {
   // Try npm-installed package first
   try {
@@ -154,10 +158,99 @@ async function writeClaudeMd(projectDir: string): Promise<void> {
   }
 }
 
+export function buildAgentsMd(projectDir: string): string {
+  return `# DocuFlow — AI Documentation Assistant
+
+DocuFlow is an MCP server that provides structured access to this codebase and maintains a living wiki.
+It is registered via \`.codex/config.toml\` and available as MCP tools in every Codex session.
+
+## Available MCP Tools
+
+### Codebase Scanner
+- **read_module** — Analyse a single file: language, classes, functions, dependencies, DB tables, endpoints, config refs, raw content.
+  - \`read_module({ path: "src/UserService.cs" })\`
+- **list_modules** — Walk a directory, extract facts for every file. One call to understand the whole project.
+  - \`list_modules({ path: "${projectDir}" })\`
+- **write_spec** — Save a markdown spec to \`.docuflow/specs/<name>.md\`.
+  - \`write_spec({ project_path: "${projectDir}", filename: "UserService", content: "..." })\`
+- **read_specs** — Read saved specs, optionally filtered by name.
+  - \`read_specs({ project_path: "${projectDir}" })\`
+
+### Wiki Pipeline
+- **ingest_source** — Ingest a markdown file from \`.docuflow/sources/\` into the wiki (entities, concepts).
+- **update_index** — Rebuild \`.docuflow/index.md\` from all wiki pages.
+- **list_wiki** — List all wiki pages by category (entity/concept/timeline/synthesis).
+- **wiki_search** — BM25 search across all wiki pages.
+- **query_wiki** — Q&A: searches wiki, synthesises an answer, returns citations.
+  - \`query_wiki({ project_path: "${projectDir}", question: "How does auth work?" })\`
+- **synthesize_answer** — Generate a markdown synthesis from a list of page IDs.
+- **save_answer_as_page** — Persist a synthesis as a wiki page.
+
+### Health & Guidance
+- **lint_wiki** — Health check: orphan pages, broken refs, stale content. Returns a 0–100 health score.
+- **get_schema_guidance** — Recommend what wiki pages should exist based on schema + current state.
+- **preview_generation** — Preview what a tool will generate before running it.
+
+## Common Workflows
+
+Start here — understand the codebase:
+\`\`\`
+list_modules({ path: "${projectDir}" })
+→ write_spec for important modules
+\`\`\`
+
+Answer a question:
+\`\`\`
+query_wiki({ project_path: "${projectDir}", question: "..." })
+\`\`\`
+
+Maintain wiki health:
+\`\`\`
+lint_wiki({ project_path: "${projectDir}" })
+\`\`\`
+
+## Storage Layout
+
+\`\`\`
+.docuflow/
+├── specs/        Code specs written by write_spec
+├── wiki/         LLM-generated wiki pages
+│   ├── entities/
+│   ├── concepts/
+│   ├── timelines/
+│   └── syntheses/
+├── sources/      Raw markdown docs to ingest
+├── schema.md     Wiki configuration (edit to customise)
+├── index.md      Auto-maintained catalog
+└── log.md        Operation log
+\`\`\`
+`;
+}
+
+async function writeAgentsMd(projectDir: string): Promise<void> {
+  const agentsMdPath = path.join(projectDir, "AGENTS.md");
+  const newSection = buildAgentsMd(projectDir);
+
+  if (fs.existsSync(agentsMdPath)) {
+    const existing = await fsp.readFile(agentsMdPath, "utf8");
+    if (existing.includes("DocuFlow")) {
+      // Replace existing DocuFlow section
+      const withoutDocuflow = existing.replace(/\n?# DocuFlow[\s\S]*/, "").trimEnd();
+      await fsp.writeFile(agentsMdPath, withoutDocuflow + "\n\n" + newSection, "utf8");
+    } else {
+      // Append to existing AGENTS.md
+      await fsp.appendFile(agentsMdPath, "\n\n" + newSection, "utf8");
+    }
+  } else {
+    await fsp.writeFile(agentsMdPath, newSection, "utf8");
+  }
+}
+
 export async function run(): Promise<void> {
   const configPath = getClaudeDesktopConfigPath();
   const vscodeConfigPath = getVSCodeMcpConfigPath();
   const copilotCliConfigPath = getCopilotCliMcpConfigPath();
+  const codexConfigPath = getCodexConfigPath();
   const serverBin = resolveServerBin();
   const nodeBin = process.execPath;
 
@@ -212,6 +305,21 @@ export async function run(): Promise<void> {
     // Copilot CLI not installed — skip silently
   }
 
+  // Register in OpenAI Codex CLI (~/.codex/config.toml in TOML format)
+  let codexCliRegistered = false;
+  try {
+    await fsp.mkdir(path.dirname(codexConfigPath), { recursive: true });
+    let tomlContent = "";
+    try { tomlContent = await fsp.readFile(codexConfigPath, "utf8"); } catch { /* new file */ }
+    if (!tomlContent.includes("[mcp_servers.docuflow]")) {
+      const entry = `\n[mcp_servers.docuflow]\ncommand = "${nodeBin}"\nargs = [${JSON.stringify(serverBin)}]\n`;
+      await fsp.writeFile(codexConfigPath, tomlContent + entry, "utf8");
+    }
+    codexCliRegistered = true;
+  } catch {
+    // Codex CLI not installed — skip silently
+  }
+
   // Create .docuflow/ directory structure
   const projectDir = process.cwd();
   const docuflowDir = path.join(projectDir, ".docuflow");
@@ -237,6 +345,9 @@ export async function run(): Promise<void> {
 
   // Generate CLAUDE.md so Claude Code picks up DocuFlow automatically
   await writeClaudeMd(projectDir);
+
+  // Generate AGENTS.md so OpenAI Codex picks up DocuFlow automatically
+  await writeAgentsMd(projectDir);
 
   // Write .vscode/mcp.json for project-level workspace MCP config (shareable via git)
   // Uses npx so it works on any machine — safe to commit
@@ -282,14 +393,15 @@ export async function run(): Promise<void> {
   console.log(`  \u251c\u2500\u2500 index.md            (auto-maintained catalog)`);
   console.log(`  \u2514\u2500\u2500 log.md              (operation log)`);
   console.log("");
-  console.log("\ud83d\udcdd CLAUDE.md:");
-  console.log(`  Generated at: ${path.join(projectDir, "CLAUDE.md")}`);
-  console.log(`  Claude Code reads DocuFlow tool instructions automatically.`);
+  console.log("\ud83d\udcdd Instruction files:");
+  console.log(`  CLAUDE.md  ✓ ${path.join(projectDir, "CLAUDE.md")}`);
+  console.log(`  AGENTS.md  ✓ ${path.join(projectDir, "AGENTS.md")}`);
   console.log("");
   console.log("\ud83d\udd27 MCP Registration:");
   console.log(`  Claude Desktop:  \u2713 registered`);
   console.log(`  VS Code Copilot: ${vscodeRegistered ? "\u2713 registered (user-level)" : "\u2014 not detected"}`);
   console.log(`  Copilot CLI:     ${copilotCliRegistered ? "\u2713 registered (~/.copilot/mcp-config.json)" : "\u2014 not detected"}`);
+  console.log(`  Codex CLI:       ${codexCliRegistered ? "\u2713 registered (~/.codex/config.toml)" : "\u2014 not detected"}`);
   console.log(`  Workspace:       \u2713 .vscode/mcp.json written (commit to share with team)`);
   console.log("");
   console.log("\ud83d\udcd6 Next steps:");
