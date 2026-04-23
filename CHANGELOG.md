@@ -1,15 +1,16 @@
 # Docuflow Changelog
 
+## [0.4.3] - 2026-04-23
+
+### Added
+- `docuflow init` now registers the MCP server in VS Code's user MCP config (`~/Library/Application Support/Code/User/mcp.json` on macOS) — DocuFlow tools are now available in GitHub Copilot Agent mode automatically after init
+- `docuflow init` output now shows registration status for both Claude Desktop and GitHub Copilot
+
 ## [0.4.2] - 2026-04-23
 
 ### Added
-- (Add your changes here)
-
-### Changed
-- (Add your changes here)
-
-### Fixed
-- (Add your changes here)
+- `docuflow --version` and `docuflow -v` flags — print the installed version
+- Improved `docuflow` bare command output: now shows version header and structured help with Commands/Options sections
 
 
 ## [0.4.1] - 2026-04-23

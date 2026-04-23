@@ -1,15 +1,16 @@
 # Changelog
 
+## [0.4.3] - 2026-04-23
+
+### Added
+- `docuflow init` now registers DocuFlow in **GitHub Copilot** (VS Code user MCP config) in addition to Claude Desktop — one command sets up both AI tools
+- `docuflow --version` / `-v` flag to print installed version
+
 ## [0.4.2] - 2026-04-23
 
 ### Added
-- (Add your changes here)
-
-### Changed
-- (Add your changes here)
-
-### Fixed
-- (Add your changes here)
+- `docuflow --version` and `docuflow -v` — print the installed version
+- Improved bare `docuflow` help output with version header and structured sections
 
 
 ## [0.4.1] - 2026-04-23

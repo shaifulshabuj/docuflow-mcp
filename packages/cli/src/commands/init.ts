@@ -13,6 +13,16 @@ function getClaudeDesktopConfigPath(): string {
   return path.join(os.homedir(), ".config", "Claude", "claude_desktop_config.json");
 }
 
+function getVSCodeMcpConfigPath(): string {
+  const platform = process.platform;
+  if (platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Code", "User", "mcp.json");
+  } else if (platform === "win32") {
+    return path.join(os.homedir(), "AppData", "Roaming", "Code", "User", "mcp.json");
+  }
+  return path.join(os.homedir(), ".config", "Code", "User", "mcp.json");
+}
+
 function resolveServerBin(): string {
   // Try npm-installed package first
   try {
@@ -142,10 +152,11 @@ async function writeClaudeMd(projectDir: string): Promise<void> {
 
 export async function run(): Promise<void> {
   const configPath = getClaudeDesktopConfigPath();
+  const vscodeConfigPath = getVSCodeMcpConfigPath();
   const serverBin = resolveServerBin();
   const nodeBin = process.execPath;
 
-  // Read or initialise Claude Desktop config
+  // Register in Claude Desktop config
   let config: Record<string, any> = {};
   try {
     const raw = await fsp.readFile(configPath, "utf8");
@@ -153,12 +164,29 @@ export async function run(): Promise<void> {
   } catch {
     // File doesn't exist yet — that's fine, we'll create it
   }
-
   if (!config.mcpServers) config.mcpServers = {};
   config.mcpServers.docuflow = { command: nodeBin, args: [serverBin] };
-
   await fsp.mkdir(path.dirname(configPath), { recursive: true });
   await fsp.writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+
+  // Register in VS Code (GitHub Copilot) user MCP config
+  let vscodeRegistered = false;
+  let vscodeConfig: Record<string, any> = {};
+  try {
+    const raw = await fsp.readFile(vscodeConfigPath, "utf8");
+    vscodeConfig = JSON.parse(raw);
+  } catch {
+    // File may not exist — create it
+  }
+  if (!vscodeConfig.servers) vscodeConfig.servers = {};
+  vscodeConfig.servers.docuflow = { command: nodeBin, args: [serverBin], type: "stdio" };
+  try {
+    await fsp.mkdir(path.dirname(vscodeConfigPath), { recursive: true });
+    await fsp.writeFile(vscodeConfigPath, JSON.stringify(vscodeConfig, null, 2) + "\n", "utf8");
+    vscodeRegistered = true;
+  } catch {
+    // VS Code not installed or config dir not writable — skip silently
+  }
 
   // Create .docuflow/ directory structure
   const projectDir = process.cwd();
@@ -215,12 +243,12 @@ export async function run(): Promise<void> {
   console.log(`  Claude Code will automatically read DocuFlow tool instructions.`);
   console.log("");
   console.log("🔧 MCP Configuration:");
-  console.log(`  MCP key:     mcpServers.docuflow`);
-  console.log(`  Config file: ${configPath}`);
+  console.log(`  Claude Desktop: ✓ registered`);
+  console.log(`  GitHub Copilot: ${vscodeRegistered ? "✓ registered" : "— VS Code not detected (add manually to .vscode/mcp.json)"}`);
   console.log("");
   console.log("📖 Next steps:");
   console.log("  1. Edit .docuflow/schema.md to customize your wiki");
   console.log("  2. Add source files to .docuflow/sources/");
-  console.log("  3. Use LLM Wiki tools to ingest, query, and maintain wiki");
-  console.log("  4. Restart Claude Desktop to activate");
+  console.log("  3. Use DocuFlow tools to ingest, query, and maintain wiki");
+  console.log("  4. Restart Claude Desktop / reload VS Code window to activate");
 }
