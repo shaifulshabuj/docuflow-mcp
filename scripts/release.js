@@ -320,7 +320,7 @@ async function main() {
   log('  2. Sync to doquflows/docuflow public repo');
   log('  3. Publish to npm (@doquflow/server, @doquflow/cli)');
   log('  4. Create GitHub Release');
-  log('\nMonitor progress at: https://github.com/your-org/docuflow-mcp/actions\n');
+  log('\nMonitor progress at: https://github.com/shaifulshabuj/docuflow-mcp/actions\n');
 }
 
 // Run

@@ -1,15 +1,81 @@
 # Docuflow Changelog
 
-## [0.3.0] - 2026-04-16
+## [0.4.0] - 2026-04-23
 
 ### Added
-- (Add your changes here)
 
-### Changed
-- (Add your changes here)
+**New MCP tool: `generate_dependency_graph`** (15th tool)
+- Scans a project and builds a dependency graph showing how modules import each other, which DB tables are shared across files, and which endpoints overlap
+- Returns `nodes`, `edges` (import/shared_table/shared_endpoint), `shared_tables`, `shared_endpoints`, `most_connected` (top 10 by connection count)
+- Supports optional `focus` parameter (neighbourhood filter — only show files connected to a specific module)
+- Supports `extensions` filter to narrow scan
+- Identifies the highest-risk files to change before touching them
+
+**New CLI command: `docuflow suggest`**
+- Domain-aware first-steps guidance (Code/Architecture, Research, Business, Personal, General)
+- Auto-detects domain from `.docuflow/schema.md`
+- Shows 5 prioritised page suggestions with reasons and ready-to-paste Claude prompts
+- Reports current wiki page count and source count as context
+- Quick-start prompts section at the bottom of output
+
+**CLAUDE.md auto-generation on `docuflow init`**
+- Both `docuflow init` and `docuflow init --interactive` now generate `CLAUDE.md` at the project root
+- Content: all 15 tool descriptions with examples, common workflows, storage layout, project-specific paths
+- Idempotent: replaces the DocuFlow section if CLAUDE.md already exists, appends if file exists without DocuFlow section
+
+**Staleness detection**
+- `list_wiki` now returns `stale: boolean` per page (true if `updated_at` > 30 days ago) and `stale_pages: number` total
+- `read_specs` now returns `stale: boolean` per spec (true if `written_at` > 30 days ago)
+
+**Go language extraction** (`extractor.ts`)
+- `type Foo struct` / `type Foo interface` → class detection
+- `func FuncName(` and `func (recv) MethodName(` → function detection
+- Go import blocks (`import "pkg"` inside blocks) → dependency detection
+- `os.Getenv("KEY")` / `os.LookupEnv("KEY")` → config ref detection
+- gorilla/mux, gin, chi, echo, stdlib HTTP routes → endpoint detection
+- GORM `db.Table("name")` → DB table detection
+
+**Ruby/Rails extraction** (`extractor.ts`)
+- `class Foo` / `module Bar` → class detection
+- `def method_name` / `def self.method_name` → function detection
+- `require 'gem'` / `require_relative '../path'` → dependency detection
+- `ENV['KEY']` / `ENV["KEY"]` → config ref detection
+- Rails routes: `get '/path'`, `post '/path'`, `resources :users` → endpoint detection
+- ActiveRecord: `has_many :table`, `belongs_to :table`, `self.table_name = 'name'` → DB table detection
+
+**Enhanced `docuflow status`**
+- Now shows: package version, CLAUDE.md presence, wiki page counts by category (entities/concepts/syntheses/timelines), source file count, last ingest date from log.md
+- Smart hints: warns if CLAUDE.md missing, suggests `docuflow suggest` if wiki is empty
+
+**Richer ingest_source page content**
+- Entity and concept pages now extract surrounding paragraph context from the source document
+- Before: `## Overview\nIntroduced in: sourceTitle` (empty stub)
+- After: actual paragraph from the source that first mentions the entity, up to 400 chars
+
+**Dynamic preview_generation**
+- Previews now read actual wiki state before generating predictions
+- `ingest_source` preview: reads real source file size, predicts page count range (low/high estimate)
+- `query_wiki` preview: shows current page count and adjusts confidence hint
+- `lint_wiki` preview: warns "wiki is empty" if no pages exist yet
+- `save_answer_as_page` preview: shows `current + 1` page count
 
 ### Fixed
-- (Add your changes here)
+
+- **`list_wiki` category filter bug**: `input.category = "entity"` was building path `wiki/entitys/` (wrong). Now uses correct `SINGULAR_TO_PLURAL` map → `wiki/entities/`
+- **`list_wiki` category label bug**: returned metadata had `category: "entitie"` for entities and `category: "ynthese"` for syntheses. Now uses `PLURAL_TO_SINGULAR` map correctly.
+- **`wiki-search.ts` category name bug**: search results for entity and synthesis pages had wrong `category` field values. Fixed with `PLURAL_TO_SINGULAR` lookup.
+- **`update-index.ts` category name bug**: same as above; index entries had wrong category labels.
+- **`lint-wiki.ts` path bug**: all four check functions (`findOrphanPages`, `findStalePages`, `findMissingReferences`, `findMetadataGaps`) looked for pages at `wiki/pageId.md` (flat) when pages live at `wiki/entities/pageId.md` etc. Result: lint silently skipped every page, always reported 0 issues. Fixed: `lintWiki()` now builds a `Map<pageId, fullFilePath>` before passing to check functions.
+- **`save-answer-as-page.ts` broken links**: Related Pages section linked to `../CATEGORY/pageId.md` (literal `"CATEGORY"` string). Fixed with `CATEGORY_DIR` lookup map.
+- **`init-interactive.ts` misleading tip**: "Open `.claude/instructions.md` to understand how Claude uses Docuflow" — that file was never created. Tip now correctly references CLAUDE.md.
+
+### Changed
+
+- `docuflow init` output now lists CLAUDE.md as a generated file and points to it for Claude setup
+- Tool count: 14 → 15 (added `generate_dependency_graph`)
+- CLI commands: 2 → 3 (added `docuflow suggest`)
+- `docuflow init --interactive` also generates CLAUDE.md
+
 
 
 ## [0.2.0] - 2026-04-16
