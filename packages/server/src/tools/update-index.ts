@@ -69,6 +69,12 @@ export async function updateIndex(input: { project_path: string }): Promise<{
     // Scan all wiki pages
     const entries: IndexEntry[] = [];
     const categories = ["entities", "concepts", "timelines", "syntheses"];
+    const PLURAL_TO_SINGULAR: Record<string, string> = {
+      entities: "entity",
+      concepts: "concept",
+      timelines: "timeline",
+      syntheses: "synthesis",
+    };
 
     for (const category of categories) {
       const categoryDir = path.join(wikiDir, category);
@@ -87,7 +93,7 @@ export async function updateIndex(input: { project_path: string }): Promise<{
           entries.push({
             id: pageId,
             title,
-            category: category.replace("s", ""), // entities → entity
+            category: PLURAL_TO_SINGULAR[category] ?? category.replace(/s$/, ""),
             path: path.relative(docuDir, filePath),
             created_at: fm.created_at ?? new Date().toISOString(),
           });

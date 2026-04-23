@@ -53,6 +53,37 @@ const RE_DOTNET_ENV = /\bEnvironment\.GetEnvironmentVariable\(\s*["']([^"']+)["'
 const RE_ICONFIG = /\bIConfiguration\b/g;
 const RE_APPSETTINGS = /\bappsettings(?:\.[A-Za-z0-9]+)?\.json\b/g;
 
+// ─── Go ─────────────────────────────────────────────────────────────────────
+// type FooBar struct | type FooBar interface
+const RE_GO_TYPE = /\btype\s+([A-Z]\w*)\s+(?:struct|interface)/g;
+// func FuncName( or func (recv *Type) MethodName(
+const RE_GO_FUNC = /\bfunc\s+(?:\([^)]+\)\s+)?([A-Za-z_]\w*)\s*\(/g;
+// import "pkg" or import ( "pkg" ) — individual quoted paths inside import blocks
+const RE_GO_IMPORT = /^\s+["']([^"'\s]+)["']\s*(?:\/\/.*)?$/gm;
+// os.Getenv("KEY") or os.LookupEnv("KEY")
+const RE_GO_ENV = /\bos\.(?:Getenv|LookupEnv)\s*\(\s*["']([A-Z_][A-Z0-9_]*)["']/g;
+// gorilla/mux, gin, chi, echo, stdlib: router.GET("/path", ...)
+const RE_GO_HTTP = /\b(?:r|router|e|mux|g|app)\s*\.\s*(?:HandleFunc|GET|POST|PUT|DELETE|PATCH|Handle|Any)\s*\(\s*["']([^"']+)["']/g;
+// GORM explicit table: db.Table("name")
+const RE_GO_GORM_TABLE = /\bdb\s*\.\s*Table\s*\(\s*["']([^"']+)["']/g;
+
+// ─── Ruby / Rails ────────────────────────────────────────────────────────────
+// class Foo or module Bar
+const RE_RUBY_CLASS = /\b(?:class|module)\s+([A-Z]\w*(?:::[A-Z]\w*)*)/g;
+// def method_name or def self.method_name
+const RE_RUBY_DEF = /^\s*def\s+(?:self\.)?([a-z_]\w*)/gm;
+// require 'gem' or require_relative '../path'
+const RE_RUBY_REQUIRE = /\brequire(?:_relative)?\s+["']([^"']+)["']/g;
+// ENV['KEY'] or ENV["KEY"]
+const RE_RUBY_ENV = /\bENV\s*\[\s*["']([A-Z_][A-Z0-9_]*)["']\s*\]/g;
+// Rails routes: get '/path', post '/path', resources :users, root 'home#index'
+const RE_RAILS_ROUTE = /^\s*(?:get|post|put|delete|patch|resources|resource|root)\s+["']([^"']+)["']/gm;
+// ActiveRecord associations: has_many :users, belongs_to :user
+const RE_AR_HAS = /\bhas_(?:many|one)\s+:(\w+)/g;
+const RE_AR_BELONGS = /\bbelongs_to\s+:(\w+)/g;
+// Explicit table name: self.table_name = 'table'
+const RE_AR_TABLE = /\bself\.table_name\s*=\s*["']([^"']+)["']/g;
+
 // SQL keywords and noise that the regex may pick up as table names.
 // Also strips single-letter hits (LINQ aliases: `from u in _db.Users` → u).
 const SQL_KEYWORD_NOISE = new Set([
@@ -82,11 +113,18 @@ function cleanTableNames(names: string[]): string[] {
 }
 
 export function extract(content: string): ExtractedFacts {
-  const classes = collect(new RegExp(RE_CLASS.source, "g"), content);
+  const classes = uniq([
+    ...collect(new RegExp(RE_CLASS.source, "g"), content),
+    ...collect(new RegExp(RE_GO_TYPE.source, "g"), content),
+    ...collect(new RegExp(RE_RUBY_CLASS.source, "g"), content),
+  ]);
+
   const functions = uniq([
     ...collect(new RegExp(RE_FUNC_KW.source, "g"), content),
     ...collect(new RegExp(RE_FUNC_ARROW.source, "g"), content),
     ...collect(new RegExp(RE_METHOD_TS.source, "gm"), content),
+    ...collect(new RegExp(RE_GO_FUNC.source, "g"), content),
+    ...collect(new RegExp(RE_RUBY_DEF.source, "gm"), content),
   ]).filter((n) => !["if", "for", "while", "switch", "catch", "return", "function"].includes(n));
 
   const dependencies = uniq([
@@ -95,6 +133,8 @@ export function extract(content: string): ExtractedFacts {
     ...collect(new RegExp(RE_REQUIRE.source, "g"), content),
     ...collect(new RegExp(RE_DECORATOR.source, "g"), content),
     ...collect(new RegExp(RE_NEW_CLASS.source, "g"), content),
+    ...collect(new RegExp(RE_GO_IMPORT.source, "gm"), content),
+    ...collect(new RegExp(RE_RUBY_REQUIRE.source, "g"), content),
   ]);
 
   const db_tables = uniq(cleanTableNames([
@@ -103,6 +143,10 @@ export function extract(content: string): ExtractedFacts {
     ...collect(new RegExp(RE_TABLE_ATTR.source, "g"), content),
     ...collect(new RegExp(RE_TABLE_FLUENT.source, "g"), content),
     ...collect(new RegExp(RE_EF_PROP.source, "g"), content),
+    ...collect(new RegExp(RE_GO_GORM_TABLE.source, "g"), content),
+    ...collect(new RegExp(RE_AR_HAS.source, "g"), content),
+    ...collect(new RegExp(RE_AR_BELONGS.source, "g"), content),
+    ...collect(new RegExp(RE_AR_TABLE.source, "g"), content),
   ]));
 
   const endpoints = uniq([
@@ -114,12 +158,16 @@ export function extract(content: string): ExtractedFacts {
     ...collect(new RegExp(RE_FLASK.source, "g"), content),
     ...collect(new RegExp(RE_FASTAPI.source, "g"), content),
     ...collect(new RegExp(RE_DJANGO.source, "g"), content),
+    ...collect(new RegExp(RE_GO_HTTP.source, "g"), content),
+    ...collect(new RegExp(RE_RAILS_ROUTE.source, "gm"), content),
   ]);
 
   const config_refs: string[] = [];
   config_refs.push(...collect(new RegExp(RE_CFG_CONNSTR.source, "g"), content).map((s) => `ConnectionStrings:${s}`));
   config_refs.push(...collect(new RegExp(RE_PROCESS_ENV.source, "g"), content).map((s) => `process.env.${s}`));
   config_refs.push(...collect(new RegExp(RE_DOTNET_ENV.source, "g"), content));
+  config_refs.push(...collect(new RegExp(RE_GO_ENV.source, "g"), content).map((s) => `os.Getenv(${s})`));
+  config_refs.push(...collect(new RegExp(RE_RUBY_ENV.source, "g"), content).map((s) => `ENV[${s}]`));
   if (RE_ICONFIG.test(content)) config_refs.push("IConfiguration");
   if (RE_APPSETTINGS.test(content)) config_refs.push("appsettings.json");
 

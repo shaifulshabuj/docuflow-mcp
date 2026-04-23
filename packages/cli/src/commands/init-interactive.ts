@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
+import { buildClaudeMd } from "./init";
 
 type Domain = "code" | "research" | "business" | "personal";
 
@@ -357,6 +358,22 @@ Record of all wiki operations.
   await fsp.writeFile(planPath, planTemplate, "utf8");
   console.log("  ✓ Created PLAN.md (interactive planning guide)");
 
+  // Generate CLAUDE.md so Claude Code picks up DocuFlow automatically
+  const claudeMdContent = buildClaudeMd(process.cwd());
+  const claudeMdPath = path.join(process.cwd(), "CLAUDE.md");
+  if (fs.existsSync(claudeMdPath)) {
+    const existing = await fsp.readFile(claudeMdPath, "utf8");
+    if (existing.includes("DocuFlow")) {
+      const withoutDocuflow = existing.replace(/\n?# DocuFlow[\s\S]*/, "").trimEnd();
+      await fsp.writeFile(claudeMdPath, withoutDocuflow + "\n\n" + claudeMdContent, "utf8");
+    } else {
+      await fsp.appendFile(claudeMdPath, "\n\n" + claudeMdContent, "utf8");
+    }
+  } else {
+    await fsp.writeFile(claudeMdPath, claudeMdContent, "utf8");
+  }
+  console.log("  ✓ Created CLAUDE.md (Claude Code will read DocuFlow tool instructions automatically)");
+
   console.log("\n✅ Wiki successfully initialized!\n");
 
   // Print summary and next steps
@@ -366,5 +383,5 @@ Record of all wiki operations.
   console.log("  3. Add first source: copy to .docuflow/sources/");
   console.log("  4. Ask Claude: 'Ingest README.md into my wiki'");
   console.log("  5. Ask Claude: 'What should my wiki contain?'");
-  console.log("\n💡 Tip: Open .claude/instructions.md to understand how Claude uses Docuflow\n");
+  console.log("\n💡 Tip: Claude Code will automatically read CLAUDE.md for DocuFlow instructions.\n");
 }

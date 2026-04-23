@@ -3,6 +3,8 @@ import fsp from "node:fs/promises";
 import { readJsonIfExists } from "../filesystem";
 import { SpecIndex } from "../types";
 
+const STALE_DAYS = 30;
+
 export async function readSpecs(input: { project_path: string; module_name?: string }) {
   const projectPath = path.resolve(input.project_path);
   const docuDir = path.join(projectPath, ".docuflow");
@@ -19,12 +21,15 @@ export async function readSpecs(input: { project_path: string; module_name?: str
     entries = entries.filter((s) => s.filename.replace(/\.md$/i, "").toLowerCase() === needle);
   }
 
+  const now = Date.now();
   const specs = [];
   for (const entry of entries) {
     const filePath = path.join(docuDir, "specs", entry.filename);
     try {
       const content = await fsp.readFile(filePath, "utf8");
-      specs.push({ filename: entry.filename, written_at: entry.written_at, content });
+      const writtenMs = entry.written_at ? new Date(entry.written_at).getTime() : NaN;
+      const stale = !isNaN(writtenMs) && (now - writtenMs) > STALE_DAYS * 86_400_000;
+      specs.push({ filename: entry.filename, written_at: entry.written_at, stale, content });
     } catch {
       // spec entry exists in index but file missing — skip silently
     }

@@ -20,6 +20,7 @@ import { saveAnswerAsPage } from "./tools/save-answer-as-page";
 import { lintWiki } from "./tools/lint-wiki";
 import { getSchemataGuidance } from "./tools/get-schema-guidance";
 import { previewGeneration } from "./tools/preview-generation";
+import { generateDependencyGraph } from "./tools/generate-dependency-graph";
 
 const server = new Server(
   { name: "docuflow", version: "0.1.0" },
@@ -118,7 +119,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "list_wiki",
       description:
-        "List all wiki pages in .docuflow/wiki/, optionally filtered by category. Returns metadata (title, created_at, sources, tags) and page counts by category.",
+        "List all wiki pages in .docuflow/wiki/, optionally filtered by category. Returns metadata (title, created_at, sources, tags, stale) and page counts by category. Pages not updated in 30+ days are flagged stale:true.",
       inputSchema: {
         type: "object",
         properties: {
@@ -261,6 +262,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["tool_name", "project_path", "params"],
       },
     },
+    {
+      name: "generate_dependency_graph",
+      description:
+        "Scan a project and build a dependency graph showing how modules import each other, which DB tables are shared, and which files are most connected. Returns nodes, edges, shared tables, and the top 10 most-connected modules. Use this to understand coupling and identify risky files to change.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root directory of the project to analyse." },
+          extensions: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional extension filter e.g. [\".ts\",\".go\"]. If omitted, all non-binary files are scanned.",
+          },
+          focus: {
+            type: "string",
+            description: "Optional: filter graph to neighbours of a specific file or module name (partial match, e.g. 'user-service').",
+          },
+        },
+        required: ["project_path"],
+      },
+    },
   ],
 }));
 
@@ -296,6 +318,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await getSchemataGuidance(args as { project_path: string; domain?: string });
     } else if (name === "preview_generation") {
       result = await previewGeneration(args as { tool_name: string; project_path: string; params: Record<string, any> });
+    } else if (name === "generate_dependency_graph") {
+      result = await generateDependencyGraph(args as { project_path: string; extensions?: string[]; focus?: string });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }

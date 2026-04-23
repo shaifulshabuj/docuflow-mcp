@@ -16,6 +16,27 @@ interface ExtractionOutput {
 }
 
 /**
+ * Find the first paragraph in the source that mentions the given name.
+ * Returns cleaned text (stripped of markdown syntax), up to 400 chars.
+ */
+function findContextParagraph(content: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\b${escaped}\\b`, "i");
+  const paragraphs = content.split(/\n{2,}/);
+  for (const para of paragraphs) {
+    if (!re.test(para)) continue;
+    const clean = para
+      .replace(/^#+\s*/gm, "")
+      .replace(/\*\*?([^*]+)\*\*?/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .trim();
+    if (clean.length > 20) return clean.substring(0, 400);
+  }
+  return null;
+}
+
+/**
  * Simple markdown-based entity extraction.
  * Looks for patterns like:
  * - **Entity:** or ### Entity Headers
@@ -110,7 +131,8 @@ function extractFromMarkdown(content: string): ExtractionOutput {
 function generateWikiPages(
   sourceId: string,
   sourceTitle: string,
-  extracted: ExtractionOutput
+  extracted: ExtractionOutput,
+  sourceContent: string
 ): WikiPage[] {
   const now = new Date().toISOString();
   const pages: WikiPage[] = [];
@@ -138,11 +160,15 @@ function generateWikiPages(
   // Create entity pages
   for (const entity of extracted.entities) {
     const entityId = `entity_${entity.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`;
+    const contextPara = findContextParagraph(sourceContent, entity.name);
+    const overview = contextPara
+      ? `${contextPara}\n\n*Introduced in: ${sourceTitle}*`
+      : `Introduced in: ${sourceTitle}`;
     const entityPage: WikiPage = {
       id: entityId,
       title: entity.name,
       category: "entity",
-      content: `# ${entity.name}\n\n**Type:** ${entity.type}\n\n## Overview\n\nIntroduced in: ${sourceTitle}`,
+      content: `# ${entity.name}\n\n**Type:** ${entity.type}\n\n## Overview\n\n${overview}`,
       frontmatter: {
         created_at: now,
         updated_at: now,
@@ -158,11 +184,15 @@ function generateWikiPages(
   // Create concept pages
   for (const concept of extracted.concepts) {
     const conceptId = `concept_${concept.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`;
+    const contextPara = findContextParagraph(sourceContent, concept);
+    const definition = contextPara
+      ? `${contextPara}\n\n*Introduced in: ${sourceTitle}*`
+      : `To be expanded with additional sources.\n\n*Introduced in: ${sourceTitle}*`;
     const conceptPage: WikiPage = {
       id: conceptId,
       title: concept,
       category: "concept",
-      content: `# ${concept}\n\n**Introduced in:** ${sourceTitle}\n\n## Definition\n\nTo be expanded with additional sources.`,
+      content: `# ${concept}\n\n## Definition\n\n${definition}`,
       frontmatter: {
         created_at: now,
         updated_at: now,
@@ -210,7 +240,7 @@ export async function ingestSource(input: {
     const extracted = extractFromMarkdown(sourceContent);
 
     // Generate wiki pages
-    const wikiPages = generateWikiPages(sourceTitle, sourceTitle, extracted);
+    const wikiPages = generateWikiPages(sourceTitle, sourceTitle, extracted, sourceContent);
 
     // Write all pages
     const pagesCreated: string[] = [];

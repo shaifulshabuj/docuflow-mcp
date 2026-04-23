@@ -2,6 +2,22 @@ import path from "node:path";
 import fsp from "node:fs/promises";
 import { safeReadFile } from "../filesystem";
 
+const PLURAL_TO_SINGULAR: Record<string, string> = {
+  entities: "entity",
+  concepts: "concept",
+  timelines: "timeline",
+  syntheses: "synthesis",
+};
+
+const SINGULAR_TO_PLURAL: Record<string, string> = {
+  entity: "entities",
+  concept: "concepts",
+  timeline: "timelines",
+  synthesis: "syntheses",
+};
+
+const STALE_DAYS = 30;
+
 interface WikiPageMetadata {
   id: string;
   title: string;
@@ -11,6 +27,7 @@ interface WikiPageMetadata {
   updated_at: string;
   sources: string[];
   tags: string[];
+  stale: boolean;
 }
 
 /**
@@ -55,6 +72,7 @@ export async function listWiki(input: {
   category?: "entity" | "concept" | "timeline" | "synthesis";
 }): Promise<{
   total_pages: number;
+  stale_pages: number;
   pages: WikiPageMetadata[];
   categories: Record<string, number>;
   error?: string;
@@ -66,17 +84,19 @@ export async function listWiki(input: {
 
     const pages: WikiPageMetadata[] = [];
     const categories: Record<string, number> = {};
+    const now = Date.now();
 
-    // Build list of categories to scan
+    // Build list of categories to scan — always use correct plural directory names
     let categoriesToScan = ["entities", "concepts", "timelines", "syntheses"];
     if (input.category) {
-      categoriesToScan = [`${input.category}s`];
+      const pluralDir = SINGULAR_TO_PLURAL[input.category] ?? `${input.category}s`;
+      categoriesToScan = [pluralDir];
     }
 
     // Scan each category
     for (const categoryDir of categoriesToScan) {
       const fullCategoryPath = path.join(wikiDir, categoryDir);
-      const category = categoryDir.replace("s", ""); // entities → entity
+      const category = PLURAL_TO_SINGULAR[categoryDir] ?? categoryDir;
 
       try {
         const files = await fsp.readdir(fullCategoryPath);
@@ -94,15 +114,20 @@ export async function listWiki(input: {
           const title = extractTitle(read.content);
           const pageId = file.replace(".md", "");
 
+          const updatedAt = fm.updated_at ?? new Date().toISOString();
+          const updatedMs = new Date(updatedAt).getTime();
+          const stale = !isNaN(updatedMs) && (now - updatedMs) > STALE_DAYS * 86_400_000;
+
           pages.push({
             id: pageId,
             title,
             category,
             path: path.relative(docuDir, filePath),
             created_at: fm.created_at ?? new Date().toISOString(),
-            updated_at: fm.updated_at ?? new Date().toISOString(),
+            updated_at: updatedAt,
             sources: fm.sources ?? [],
             tags: fm.tags ?? [],
+            stale,
           });
 
           categoryCount++;
@@ -118,12 +143,14 @@ export async function listWiki(input: {
 
     return {
       total_pages: pages.length,
+      stale_pages: pages.filter((p) => p.stale).length,
       pages: pages.sort((a, b) => a.title.localeCompare(b.title)),
       categories,
     };
   } catch (e: any) {
     return {
       total_pages: 0,
+      stale_pages: 0,
       pages: [],
       categories: {},
       error: e?.message ?? String(e),

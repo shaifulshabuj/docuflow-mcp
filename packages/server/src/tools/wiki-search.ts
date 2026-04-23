@@ -127,10 +127,17 @@ export async function wikiSearch(input: {
       }
     }
 
+    const PLURAL_TO_SINGULAR: Record<string, string> = {
+      entities: "entity",
+      concepts: "concept",
+      timelines: "timeline",
+      syntheses: "synthesis",
+    };
+
     // Second pass: search all pages
     for (const categoryDir of categoriesToScan) {
       const fullCategoryPath = path.join(wikiDir, categoryDir);
-      const category = categoryDir.replace("s", ""); // entities → entity
+      const category = PLURAL_TO_SINGULAR[categoryDir] ?? categoryDir.replace(/s$/, "");
 
       try {
         const files = await fsp.readdir(fullCategoryPath);

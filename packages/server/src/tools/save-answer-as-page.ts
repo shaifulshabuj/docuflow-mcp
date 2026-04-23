@@ -45,6 +45,13 @@ outbound_links: ${JSON.stringify(sources)}
 ---
 `;
 
+    const CATEGORY_DIR: Record<string, string> = {
+      synthesis: "syntheses",
+      entity: "entities",
+      concept: "concepts",
+      timeline: "timelines",
+    };
+
     // Build page content
     const pageContent = `${frontmatterYaml}
 # ${input.page_title}
@@ -61,7 +68,7 @@ ${input.answer}
 
 ${
   sources.length > 0
-    ? sources.map((s) => `- [\`${s}\`](../CATEGORY/${s}.md)`).join("\n")
+    ? sources.map((s) => `- [\`${s}\`](../${CATEGORY_DIR[category] ?? category + "s"}/${s}.md)`).join("\n")
     : "No source pages linked."
 }
 

@@ -80,14 +80,11 @@ function extractLinks(content: string): string[] {
 }
 
 function findOrphanPages(
-  wikiPath: string,
-  allPageIds: Set<string>
+  pageMap: Map<string, string>
 ): LintIssue[] {
   const issues: LintIssue[] = [];
 
-  for (const pageId of allPageIds) {
-    // Pages with no inbound links are orphans
-    const filePath = path.join(wikiPath, `${pageId}.md`);
+  for (const [pageId, filePath] of pageMap) {
     if (!fs.existsSync(filePath)) continue;
 
     const content = fs.readFileSync(filePath, "utf-8");
@@ -108,12 +105,11 @@ function findOrphanPages(
   return issues;
 }
 
-function findStalePages(wikiPath: string, allPageIds: Set<string>): LintIssue[] {
+function findStalePages(pageMap: Map<string, string>): LintIssue[] {
   const issues: LintIssue[] = [];
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  for (const pageId of allPageIds) {
-    const filePath = path.join(wikiPath, `${pageId}.md`);
+  for (const [pageId, filePath] of pageMap) {
     if (!fs.existsSync(filePath)) continue;
 
     const content = fs.readFileSync(filePath, "utf-8");
@@ -138,13 +134,11 @@ function findStalePages(wikiPath: string, allPageIds: Set<string>): LintIssue[] 
 }
 
 function findMissingReferences(
-  wikiPath: string,
-  allPageIds: Set<string>
+  pageMap: Map<string, string>
 ): LintIssue[] {
   const issues: LintIssue[] = [];
 
-  for (const pageId of allPageIds) {
-    const filePath = path.join(wikiPath, `${pageId}.md`);
+  for (const [pageId, filePath] of pageMap) {
     if (!fs.existsSync(filePath)) continue;
 
     const content = fs.readFileSync(filePath, "utf-8");
@@ -152,7 +146,7 @@ function findMissingReferences(
 
     const links = extractLinks(body);
     for (const link of links) {
-      if (!allPageIds.has(link)) {
+      if (!pageMap.has(link)) {
         issues.push({
           type: "missing_ref",
           page_id: pageId,
@@ -169,13 +163,11 @@ function findMissingReferences(
 }
 
 function findMetadataGaps(
-  wikiPath: string,
-  allPageIds: Set<string>
+  pageMap: Map<string, string>
 ): LintIssue[] {
   const issues: LintIssue[] = [];
 
-  for (const pageId of allPageIds) {
-    const filePath = path.join(wikiPath, `${pageId}.md`);
+  for (const [pageId, filePath] of pageMap) {
     if (!fs.existsSync(filePath)) continue;
 
     const content = fs.readFileSync(filePath, "utf-8");
@@ -359,15 +351,16 @@ export async function lintWiki(params: {
     throw new Error(`Wiki not found at ${wikiPath}`);
   }
 
-  // Collect all page IDs
-  const allPageIds = new Set<string>();
+  // Collect all page IDs mapped to their full file paths
+  const pageMap = new Map<string, string>();
   for (const categoryDir of fs.readdirSync(wikiPath)) {
     const categoryPath = path.join(wikiPath, categoryDir);
     if (!fs.statSync(categoryPath).isDirectory()) continue;
 
     for (const file of fs.readdirSync(categoryPath)) {
       if (file.endsWith(".md")) {
-        allPageIds.add(file.replace(".md", ""));
+        const pageId = file.replace(".md", "");
+        pageMap.set(pageId, path.join(categoryPath, file));
       }
     }
   }
@@ -376,7 +369,7 @@ export async function lintWiki(params: {
   let issues: LintIssue[] = [];
 
   if (check_type === "all" || check_type === "orphans") {
-    issues.push(...findOrphanPages(wikiPath, allPageIds));
+    issues.push(...findOrphanPages(pageMap));
   }
 
   if (check_type === "all" || check_type === "contradictions") {
@@ -384,12 +377,12 @@ export async function lintWiki(params: {
   }
 
   if (check_type === "all" || check_type === "stale") {
-    issues.push(...findStalePages(wikiPath, allPageIds));
+    issues.push(...findStalePages(pageMap));
   }
 
   if (check_type === "all" || check_type === "metadata") {
-    issues.push(...findMissingReferences(wikiPath, allPageIds));
-    issues.push(...findMetadataGaps(wikiPath, allPageIds));
+    issues.push(...findMissingReferences(pageMap));
+    issues.push(...findMetadataGaps(pageMap));
   }
 
   // Calculate metrics
@@ -403,7 +396,7 @@ export async function lintWiki(params: {
 
   // Build result
   const result: LintResult = {
-    total_pages: allPageIds.size,
+    total_pages: pageMap.size,
     issues_found: issues,
     metrics,
     recommendations: [],
