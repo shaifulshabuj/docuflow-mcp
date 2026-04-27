@@ -1,0 +1,54 @@
+{
+  "version": "2",
+  "platforms": [
+    "claude",
+    "copilot-cli"
+  ],
+  "policies": {
+    "allowedPaths": [
+      "src/**",
+      "lib/**",
+      ".docuflow/**",
+      "*.json",
+      "*.md",
+      "*.ts",
+      "*.js",
+      "tests/**"
+    ],
+    "blockedPaths": [
+      "./.env",
+      "./.env.*",
+      "/etc/**",
+      "/usr/**",
+      "node_modules/**",
+      ".env.local",
+      "secrets/**",
+      "*.key",
+      "*.pem"
+    ],
+    "allowedCommands": [
+      "npm",
+      "node",
+      "git",
+      "tsc",
+      "eslint"
+    ],
+    "blockedCommands": [
+      "rm -rf",
+      "DROP TABLE",
+      "DROP DATABASE",
+      "chmod 777",
+      "regex:\\|\\s*bash",
+      "regex:\\|\\s*sh\\b",
+      "regex:\\$\\(curl",
+      "regex:\\$\\(wget",
+      "wget ",
+      "sudo",
+      "passwd"
+    ],
+    "requireApproval": [
+      "./waymark.config.json"
+    ],
+    "maxBashOutputBytes": 10000
+  }
+}
