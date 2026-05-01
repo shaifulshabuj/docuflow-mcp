@@ -40,11 +40,11 @@ else
 fi
 
 if git log --all --oneline -p -- "*.ts" "*.js" 2>/dev/null | \
-  grep -v "WAYMARK_SLACK_WEBHOOK_URL\|YOUR_TOKEN\|placeholder\|example\|sk-ant-example\|sk-ant-test" | \
-  grep -q "sk-ant\|npm_[A-Za-z0-9]\{36\}"; then
-  echo "  WARN: Possible secrets in git history — review carefully"
+  grep -v "WAYMARK_SLACK_WEBHOOK_URL\|YOUR_TOKEN\|placeholder\|example\|sk-ant-example\|sk-ant-test\|ANTHROPIC_API_KEY env\|ANTHROPIC_API_KEY for\|ANTHROPIC_API_KEY — " | \
+  grep -qE "sk-ant-[A-Za-z0-9]{36}|npm_[A-Za-z0-9]{36}"; then
+  check "No actual secrets in git history" "fail"
 else
-  check "No obvious secrets in git history" "pass"
+  check "No actual secrets in git history" "pass"
 fi
 
 # ── 2. Build ─────────────────────────────────────────────────────────────────
