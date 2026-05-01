@@ -12,30 +12,35 @@ name: DocuFlow Auto-Sync
 # Claude reads CLAUDE.md, sees the diff, and updates the wiki autonomously.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# DISABLED: Local sync with Copilot CLI instead. Run: docuflow sync --ai
+# on:
+#   push:
+#     branches: [main, master]
+#     # Only trigger when actual code or docs change (not when wiki updates itself)
+#     paths-ignore:
+#       - ".docuflow/**"
+#       - "*.md"
+#       - "release/**"
+#
+#   # Allow manual trigger from GitHub Actions UI
+#   workflow_dispatch:
+#     inputs:
+#       since_ref:
+#         description: "Git ref to diff from (e.g. HEAD~5 or a SHA)"
+#         required: false
+#         default: "HEAD~1"
+#       force_full_sync:
+#         description: "Sync all sources (not just changed files)"
+#         type: boolean
+#         default: false
+#
+#   # Scheduled: full wiki health check weekly
+#   schedule:
+#     - cron: "0 9 * * MON"   # Every Monday at 9:00 UTC
+
 on:
-  push:
-    branches: [main, master]
-    # Only trigger when actual code or docs change (not when wiki updates itself)
-    paths-ignore:
-      - ".docuflow/**"
-      - "*.md"
-      - "release/**"
-
-  # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
-    inputs:
-      since_ref:
-        description: "Git ref to diff from (e.g. HEAD~5 or a SHA)"
-        required: false
-        default: "HEAD~1"
-      force_full_sync:
-        description: "Sync all sources (not just changed files)"
-        type: boolean
-        default: false
-
-  # Scheduled: full wiki health check weekly
-  schedule:
-    - cron: "0 9 * * MON"   # Every Monday at 9:00 UTC
+    # Manual trigger only - for safety
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
