@@ -1,6 +1,86 @@
 # Docuflow Changelog
 
-## [0.4.6] - 2026-04-23
+## [0.5.0] - 2026-05-01
+
+### Added
+
+**Auto-Sync: `docuflow watch` — background daemon**
+- Starts a persistent daemon that watches for file changes and keeps the wiki in sync automatically
+- `SOURCE WATCHER` — monitors `.docuflow/sources/` and auto-ingests any new/changed `.md` file within <1 second
+- `CODE WATCHER` — monitors project source files (`.ts`, `.py`, `.go`, `.rb`, `.java`, `.cs`, etc.) and triggers AI-powered doc generation on change (3-second debounce)
+- `LINT SCHEDULER` — runs `lint_wiki` every N hours (default: 24h), reports health score and issues
+- `--lint-interval N` flag — set lint schedule in hours
+- `--code-ext ts,py` flag — restrict code watcher to specific file extensions
+- **PID file management** — writes `.docuflow/watch.pid` on start; contains PID, bridge, started_at, options
+- **Duplicate-start protection** — blocks second daemon for same project; shows existing PID and suggests `watch stop`
+- **Graceful shutdown** — single `shutdown()` handler covers all watchers + timers; removes PID file on exit
+- **macOS double-fire fix** — 500ms debounce on `fs.watch` `rename` event prevents double-ingest
+- **32-bit overflow fix** — lint interval capped at `2,147,483,647 ms` (~24.8 days) to prevent Node.js `setInterval` overflow
+
+**Auto-Sync: `docuflow watch stop/status/restart` — daemon lifecycle management**
+- `docuflow watch stop` — sends SIGTERM to running daemon, waits 5s, SIGKILL if needed, removes PID file
+- `docuflow watch status` — reads PID file: shows `● running` with PID/uptime/bridge/started-at, or `stopped`; auto-cleans stale PID files
+- `docuflow watch restart` — stops current daemon, re-spawns with identical options (reads saved options from PID file)
+- Stale PID handling — if process died without cleanup, status/stop detect and auto-clean the orphaned PID file
+
+**Auto-Sync: `docuflow sync` — one-shot sync for CI/CD and git hooks**
+- `docuflow sync` — re-ingests all sources, rebuilds index, runs lint check
+- `docuflow sync --source <file>` — sync a single source file only
+- `docuflow sync --no-lint` — skip health check (faster for CI)
+- `docuflow sync --fail-on-score N` — exit 1 if health score < N (default: 70); useful for CI quality gates
+- `docuflow sync --quiet` — suppress all output (pure CI mode)
+- `docuflow sync --since-commit <REF>` — diff code changes since git ref, only process relevant sources
+- Exit codes: 0 = success, 1 = health below threshold or ingest error, 2 = .docuflow/ not found
+
+**AI Bridge system — 4-tier priority (for `watch --ai` and `sync --ai`)**
+- Priority 1: **`copilot` CLI** (`@github/copilot`) — directly calls DocuFlow MCP tools (ingest, update_index, lint_wiki) via `copilot --prompt --allow-all-tools --no-ask-user --output-format json`; returns full wiki maintenance report
+- Priority 2: **`claude` CLI** (Claude Code) — directly calls DocuFlow MCP tools via `claude --print --dangerously-skip-permissions --mcp-config`
+- Priority 3: **`codex` CLI** (OpenAI Codex) — generates markdown doc from changed files, saves to sources/, ingests
+- Priority 4: **Anthropic API** (`ANTHROPIC_API_KEY`) — same as codex but via direct HTTPS (no CLI required)
+- `--copilot` / `--claude` / `--codex` flags — force specific bridge instead of auto-detecting
+- Graceful fallback — if forced bridge not installed, automatically falls back to next priority
+- `skipManualSync` flag — when Copilot/Claude handled everything via MCP, direct ingest/index steps are skipped
+
+**Key discovery: Copilot CLI is the best bridge**
+- `@github/copilot` registers DocuFlow in `~/.copilot/mcp-config.json` (done by `docuflow init`)
+- In `--prompt` mode, Copilot directly calls `list_wiki`, `ingest_source`, `update_index`, `lint_wiki`
+- No intermediate doc generation step — Copilot maintains the wiki natively as an MCP agent
+- Returns structured markdown report: pages before/after, health score, issue analysis
+- Verified: 216→219 pages in 40.8s, health score 95/100, full issue breakdown
+
+**Git hook auto-installation**
+- `docuflow init` now installs `.git/hooks/post-commit` automatically
+- Hook runs `docuflow sync --ai --quiet &` in background after every commit (never delays git)
+- Hook guards with `command -v docuflow` — safe on machines without DocuFlow
+- Idempotent — re-running `docuflow init` detects existing hook marker and skips
+- Appends to existing hooks rather than overwriting
+
+**GitHub Actions workflow**
+- New `.github/workflows/docuflow-sync.yml` — auto-syncs wiki on every push to main
+- Mode A: `claude-code-action` (richest) — Claude reads diff, calls DocuFlow MCP tools, commits updated wiki
+- Mode B: `docuflow sync --ai` — direct Anthropic API call, commits results
+- Weekly scheduled lint check (`cron: '0 9 * * MON'`)
+- Manual trigger via `workflow_dispatch` with `since_ref` and `force_full_sync` inputs
+- Publishes health summary to GitHub Actions step summary
+
+### Fixed
+
+- **Double-fire on macOS `fs.watch`** — `rename` event fires twice when a file is created; fixed with 500ms debounce on sources watcher
+- **32-bit `setInterval` overflow** — `--lint-interval` values >24.8 days caused Node.js overflow warning and immediate fire; capped at `2_147_483_647` ms
+- **Duplicate SIGINT/SIGTERM handlers** — `codeWatcher` and main `shutdown()` both registered SIGTERM handlers causing stop to wait 5s unnecessarily; merged into single handler
+- **Claude bridge auth filter** — `Invalid API key` error string now filtered from `--print` output before returning null
+- **Claude bridge MCP config** — added `--dangerously-skip-permissions` and explicit `--mcp-config` to Claude CLI invocation for non-interactive MCP tool use
+- **Release workflow `rsync`** — added `--exclude='*.pid'` to prevent `.docuflow/watch.pid` files from shipping to public repo
+
+### Changed
+
+- CLI tool count: 4 commands → **6 commands** (added `watch`, `sync`; `watch` has `stop/status/restart` sub-commands)
+- `docuflow init` now installs git post-commit hook in addition to MCP registration
+- `docuflow` help output updated with all new commands, flags, and AI bridge priority explanation
+- Pre-release check script: 8 checks → **20 checks** (added dist file verification, version sync, smoke tests, CLI coverage)
+- CI workflow: single build job → **2 jobs** (build + 10-step smoke test suite)
+- Release workflow: added `--exclude='*.pid'` to rsync
+
 
 ### Added
 - `docuflow init` now registers DocuFlow in **OpenAI Codex CLI** (`~/.codex/config.toml`) — DocuFlow MCP tools available in every Codex session automatically
