@@ -46,12 +46,13 @@ if (cmd === '--version' || cmd === '-v') {
     const codeExt   = getFlagValue('--code-ext');
     import('./commands/watch').then(m =>
       m.run({
-        ai:                hasFlag('--ai'),
-        forceCopilot:      hasFlag('--copilot'),
-        forceClaude:       hasFlag('--claude'),
-        forceCodex:        hasFlag('--codex'),
-        lintIntervalHours: lintHours ? Number(lintHours) : 24,
-        codeExtensions:    codeExt ? codeExt.split(',') : undefined,
+        ai:                         hasFlag('--ai'),
+        forceCopilot:               hasFlag('--copilot'),
+        forceClaude:                hasFlag('--claude'),
+        forceCodex:                 hasFlag('--codex'),
+        lintIntervalHours:          lintHours ? Number(lintHours) : 24,
+        codeExtensions:             codeExt ? codeExt.split(',') : undefined,
+        allowDangerousPermissions:  hasFlag('--allow-dangerous-permissions'),
       })
     );
   }
@@ -63,15 +64,16 @@ if (cmd === '--version' || cmd === '-v') {
   const failScore   = getFlagValue('--fail-on-score');
   import('./commands/sync').then(m =>
     m.run({
-      ai:           hasFlag('--ai'),
-      forceCopilot: hasFlag('--copilot'),
-      forceClaude:  hasFlag('--claude'),
-      forceCodex:   hasFlag('--codex'),
+      ai:                         hasFlag('--ai'),
+      forceCopilot:               hasFlag('--copilot'),
+      forceClaude:                hasFlag('--claude'),
+      forceCodex:                 hasFlag('--codex'),
       sinceCommit,
       sourceFile,
-      noLint:       hasFlag('--no-lint'),
-      failOnScore:  failScore ? Number(failScore) : 70,
-      quiet:        hasFlag('--quiet', '-q'),
+      noLint:                     hasFlag('--no-lint'),
+      failOnScore:                failScore ? Number(failScore) : 70,
+      quiet:                      hasFlag('--quiet', '-q'),
+      allowDangerousPermissions:  hasFlag('--allow-dangerous-permissions'),
     })
   );
 
@@ -107,7 +109,10 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  sync --quiet            Suppress output (CI mode)');
   console.log('');
   console.log('Options:');
-  console.log('  --version, -v           Print version number');
+  console.log('  --version, -v                    Print version number');
+  console.log('  --allow-dangerous-permissions    Pass --dangerously-skip-permissions to Claude CLI');
+  console.log('                                   Required for Claude bridge in non-interactive use.');
+  console.log('                                   Only use when file content in this project is trusted.');
   console.log('');
   console.log('AI bridge priority (for --ai flag):');
   console.log('  1. copilot  (@github/copilot) — calls DocuFlow MCP tools directly ⚡');

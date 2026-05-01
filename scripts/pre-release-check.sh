@@ -67,7 +67,7 @@ done
 
 for f in release/README.md release/CHANGELOG.md; do
   [ -f "$f" ] && check "$f exists" "pass" || check "$f exists" "fail"
-fi
+done
 
 # ── 4. Compiled dist files (CLI commands) ────────────────────────────────────
 
@@ -142,9 +142,10 @@ else
 fi
 
 # help output includes all key commands
+# Use grep -e <pattern> so patterns starting with "--" are not mistaken for flags
 HELP=$(node packages/cli/dist/index.js 2>&1)
 for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "--copilot" "--claude"; do
-  echo "$HELP" | grep -q "$cmd" \
+  echo "$HELP" | grep -qe "$cmd" \
     && check "help contains: $cmd" "pass" \
     || check "help contains: $cmd" "fail"
 done
@@ -153,7 +154,8 @@ done
 
 echo ""
 echo "Checking MCP tool count..."
-TOOL_COUNT=$(grep -c '"name":' packages/server/src/index.ts 2>/dev/null || echo 0)
+# Count tool imports (one per tool) — more reliable than scanning the tools array
+TOOL_COUNT=$(grep 'from "\./tools/' packages/server/src/index.ts 2>/dev/null | wc -l | tr -d ' ')
 [ "$TOOL_COUNT" -ge 15 ] \
   && check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "pass" \
   || check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "fail"

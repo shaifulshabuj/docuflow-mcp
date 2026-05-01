@@ -8,6 +8,9 @@
     "allowedPaths": [
       "src/**",
       "lib/**",
+      "packages/**",
+      ".github/**",
+      "scripts/**",
       ".docuflow/**",
       "*.json",
       "*.md",

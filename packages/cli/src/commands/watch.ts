@@ -204,6 +204,11 @@ function buildClaudeSyncPrompt(projectPath: string, changedFiles: string[]): str
   return buildCopilotSyncPrompt(projectPath, changedFiles);
 }
 
+// Module-level flag: set once in run() before any watchers fire.
+// Controls whether --dangerously-skip-permissions is passed to Claude CLI.
+// Requires explicit --allow-dangerous-permissions opt-in from the user.
+let _allowDangerousPermissions = false;
+
 function runClaudeCLI(prompt: string, timeoutMs = 120_000): string | null {
   let serverBin: string;
   try {
@@ -215,9 +220,14 @@ function runClaudeCLI(prompt: string, timeoutMs = 120_000): string | null {
     mcpServers: { docuflow: { type: "stdio", command: process.execPath, args: [serverBin] } }
   });
 
+  const claudeArgs = ["--print", "--mcp-config", mcpConfig];
+  if (_allowDangerousPermissions) {
+    claudeArgs.splice(1, 0, "--dangerously-skip-permissions");
+  }
+
   const result = spawnSync(
     "claude",
-    ["--print", "--dangerously-skip-permissions", "--mcp-config", mcpConfig],
+    claudeArgs,
     { input: prompt, encoding: "utf8", timeout: timeoutMs, env: { ...process.env as any } }
   );
 
@@ -449,6 +459,7 @@ export interface WatchOptions {
   forceCodex?: boolean;
   lintIntervalHours?: number;
   codeExtensions?: string[];
+  allowDangerousPermissions?: boolean;  // pass --dangerously-skip-permissions to Claude CLI
 }
 
 // ─── PID file helpers (shared with watch-stop / watch-status) ────────────────
@@ -505,6 +516,13 @@ export async function run(options: WatchOptions = {}): Promise<void> {
     console.error(c.red(`  ✗ .docuflow/ not found at ${projectPath}`));
     console.error(`    Run "docuflow init" first.`);
     process.exit(1);
+  }
+
+  // Set module-level flag before any watchers or timers are created
+  _allowDangerousPermissions = !!options.allowDangerousPermissions;
+  if (_allowDangerousPermissions) {
+    console.warn(c.yellow("  ⚠  --allow-dangerous-permissions: Claude CLI will skip all permission prompts."));
+    console.warn(c.yellow("     Ensure file content in this project is trusted — injected instructions will execute without safeguards."));
   }
 
   await fsp.mkdir(sourcesDir, { recursive: true });

@@ -127,12 +127,12 @@ function runCopilotSync(prompt: string): string | null {
 
 /**
  * Run Claude CLI — directly calls DocuFlow MCP tools.
- * Passes --dangerously-skip-permissions so MCP tools run non-interactively.
+ * Pass allowDangerousPermissions=true (via --allow-dangerous-permissions CLI flag)
+ * to skip interactive permission prompts for non-interactive use.
+ * Without it Claude CLI may prompt for tool access and time out in a daemon context.
  * Injects docuflow MCP config explicitly via --mcp-config.
  */
-function runClaudeSync(prompt: string): string | null {
-  const projectPath = prompt.match(/project_path.*?'([^']+)'/)?.[1] ?? process.cwd();
-
+function runClaudeSync(prompt: string, projectPath: string, allowDangerousPermissions = false): string | null {
   // Build the MCP config pointing to the local server binary
   let serverBin: string;
   try {
@@ -146,16 +146,15 @@ function runClaudeSync(prompt: string): string | null {
     }
   });
 
-  // Set ANTHROPIC_API_KEY in env if available
   const env: Record<string, string> = { ...process.env as any };
+  const claudeArgs = ["--print", "--mcp-config", mcpConfig];
+  if (allowDangerousPermissions) {
+    claudeArgs.splice(1, 0, "--dangerously-skip-permissions");
+  }
 
   const result = spawnSync(
     "claude",
-    [
-      "--print",
-      "--dangerously-skip-permissions",
-      "--mcp-config", mcpConfig,
-    ],
+    claudeArgs,
     { input: prompt, encoding: "utf8", timeout: 180_000, env }
   );
 
@@ -221,6 +220,7 @@ export interface SyncOptions {
   noLint?: boolean;
   failOnScore?: number;
   quiet?: boolean;
+  allowDangerousPermissions?: boolean;  // pass --dangerously-skip-permissions to Claude CLI
 }
 
 export async function run(options: SyncOptions = {}): Promise<void> {
@@ -292,7 +292,7 @@ export async function run(options: SyncOptions = {}): Promise<void> {
       } else if (bridge === "claude") {
         info(`  ⚡ Claude will directly call DocuFlow MCP tools (ingest + index + lint)...`);
         const prompt = buildSyncPrompt(projectPath, changedCodeFiles);
-        const result = runClaudeSync(prompt);
+        const result = runClaudeSync(prompt, projectPath, options.allowDangerousPermissions);
         if (result) {
           info(c.green(`  ✅ Claude completed wiki sync via MCP tools`));
           info(c.dim(`     ${result.replace(/\n/g, "\n     ")}`));
