@@ -351,6 +351,30 @@ $ docuflow init --interactive
    - Claude uses query_wiki automatically
    - Or run queries manually
 
+### Local Wiki Sync (v0.5.3+)
+
+**No GitHub Actions or API keys needed.** Sync happens on your machine with Copilot, Claude, or Codex CLI.
+
+**One-shot sync:**
+```bash
+docuflow sync --ai                    # Auto-detect best AI bridge
+docuflow sync --ai --copilot          # Force Copilot CLI
+docuflow sync --ai --quiet            # Quiet mode (CI scripts)
+```
+
+**Continuous background sync:**
+```bash
+docuflow watch --ai --copilot         # Start daemon
+docuflow watch status                 # Check status
+docuflow watch stop                   # Stop daemon
+```
+
+**Auto-sync on every commit** (enabled by default):
+- Git post-commit hook runs `docuflow sync --ai` after commits
+- Non-blocking (runs in background)
+
+See [`LOCAL_SYNC_SETUP.md`](./LOCAL_SYNC_SETUP.md) for full workflow guide.
+
 ### For Claude/LLM Agents
 
 Claude automatically:

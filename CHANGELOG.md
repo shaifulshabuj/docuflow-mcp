@@ -3,13 +3,27 @@
 ## [0.5.3] - 2026-05-01
 
 ### Added
-- (Add your changes here)
+- **`docuflow sync --ai`** — One-shot wiki sync command (AI-powered)
+  - Auto-detects best local AI bridge (Copilot → Claude Code → Codex → API)
+  - `--copilot`, `--claude`, `--codex` flags to force specific bridge
+  - `--since-commit REF` for incremental sync
+  - `--fail-on-score N` to fail if health < threshold
+  - `--quiet` mode for CI integration
+- **Local-first sync workflow** — No GitHub Actions, no API keys required
+  - Move wiki sync to developer machine for instant feedback
+  - Git post-commit hook auto-syncs on every commit (non-blocking)
+  - Comprehensive `LOCAL_SYNC_SETUP.md` guide
 
 ### Changed
-- (Add your changes here)
+- **`.github/workflows/docuflow-sync.yml`** — Disabled GitHub Actions workflow
+  - CI/CD wiki sync removed; developers now run sync locally
+  - Reduces overhead and eliminates API key management
+  - Post-commit hook provides automatic sync if enabled
+- **Copilot CLI priority** — Now preferred bridge (faster MCP tool calling)
 
 ### Fixed
-- (Add your changes here)
+- Watch daemon now correctly recovers from failed Copilot calls
+- Auto-sync properly handles files with no recent changes
 
 
 ## [0.5.2] - 2026-05-01
