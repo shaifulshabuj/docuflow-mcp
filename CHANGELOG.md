@@ -3,25 +3,33 @@
 ## [1.1.0] - 2026-05-07
 
 ### Added
-- (Add your changes here)
+- **`docuflow ui`** — New CLI command that starts an all-in-one Express server (port 48821) bundling the React web interface + HTTP API bridge
+  - Serves `/api/*` routes and static Vite build from the same origin (no CORS)
+  - Auto-discovers DocuFlow projects in `~/dev`, `~/code`, `~/projects`, `~/work`, `~/src`, `~/Desktop`
+  - Opens browser automatically (suppressed with `--no-open`); custom port via `--port`
+  - Graceful SIGINT/SIGTERM shutdown
+- **`docuflow start`** — Alias for `docuflow ui`
+- **Web UI bundled into `@doquflow/cli` npm package** — `ui-dist/` directory included in published package; no separate install needed
+- **Project-level Claude skill files** — `.claude/commands/` directory with 3 auto-improving skill documents:
+  - `df-develop.md` — Development patterns, `loadTool()` pattern, adding CLI commands and API endpoints
+  - `df-test.md` — 5-layer validation, TypeScript checks, pre-release check breakdown, known failure modes
+  - `df-release.md` — Release sequence, version alignment, CHANGELOG discipline, release.js internals
+- **Copilot instructions updated** — `.github/copilot-instructions.md` rewritten for v1.1.0; references all 3 skill files
 
 ### Changed
-- (Add your changes here)
+- Root `package.json` build order: `server → ui → cli → api` (UI must build before CLI copies `ui-dist`)
+- `packages/cli/package.json` now includes Express/cors dependencies and `ui-dist/**` in published files
 
 ### Fixed
-- (Add your changes here)
+- `.gitignore` — Changed `.claude/` → `.claude/settings.local.json` so skill files are tracked in git
 
 
 ## [1.0.0] - 2026-05-07
 
 ### Added
-- (Add your changes here)
-
-### Changed
-- (Add your changes here)
-
-### Fixed
-- (Add your changes here)
+- `packages/ui/` — Vite + React 18 web interface (6 views: Ask, Wiki, Graph, Health, Sync, Onboard)
+- `packages/api/` — Express HTTP bridge on port 48821 for development
+- All 6 UI views wired to live API with graceful mock fallback when API offline
 
 
 ## [Unreleased] — v0.6.0

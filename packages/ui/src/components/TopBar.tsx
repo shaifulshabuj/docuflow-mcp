@@ -1,16 +1,46 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Btn } from './UIKit';
 import Icon from './Icon';
 import { useProject } from '../context/ProjectContext';
 import { DOCUFLOW_DATA as D } from '../data/mock';
 
 export default function TopBar() {
-  const { projectInfo, projects, setProjectPath, apiOnline } = useProject();
-  const [showPicker, setShowPicker] = useState(false);
+  const { projectInfo, projects, setProjectPath, apiOnline, addProjectByPath } = useProject();
+  const [showPicker, setShowPicker]   = useState(false);
+  const [addPath, setAddPath]         = useState('');
+  const [addStatus, setAddStatus]     = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
+  const [addError, setAddError]       = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const name = projectInfo.name || D.project.name;
+  const name       = projectInfo.name       || D.project.name;
   const syncStatus = projectInfo.syncStatus || D.project.syncStatus;
   const lastIngest = projectInfo.lastIngest || D.project.lastIngest;
+
+  function openPicker() {
+    setShowPicker(p => !p);
+    setAddPath('');
+    setAddStatus('idle');
+    setAddError('');
+  }
+
+  async function handleAddPath() {
+    const trimmed = addPath.trim();
+    if (!trimmed) return;
+    setAddStatus('loading');
+    setAddError('');
+    const result = await addProjectByPath(trimmed);
+    if (result.ok) {
+      setAddStatus('ok');
+      setAddPath('');
+      setTimeout(() => {
+        setShowPicker(false);
+        setAddStatus('idle');
+      }, 800);
+    } else {
+      setAddStatus('err');
+      setAddError(result.error ?? 'Unknown error');
+    }
+  }
 
   return (
     <div className="df-topbar">
@@ -22,20 +52,18 @@ export default function TopBar() {
             fontFamily: 'inherit', fontSize: 'inherit', padding: 0,
             display: 'flex', alignItems: 'center', gap: 4,
           }}
-          onClick={() => setShowPicker(p => !p)}
-          title={projects.length > 1 ? 'Switch project' : undefined}
+          onClick={openPicker}
+          title="Switch project or add by path"
         >
           <span style={{ color: 'var(--df-text-3)' }}>{name}</span>
-          {projects.length > 1 && (
-            <Icon name="chevron-down" size={11} style={{ color: 'var(--df-text-4)' }} />
-          )}
+          <Icon name="chevron-down" size={11} style={{ color: 'var(--df-text-4)' }} />
         </button>
 
-        {showPicker && projects.length > 1 && (
+        {showPicker && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, marginTop: 4,
             background: 'var(--df-surface)', border: '1px solid var(--df-border-2)',
-            borderRadius: 'var(--df-r-lg)', padding: '4px 0', minWidth: 220,
+            borderRadius: 'var(--df-r-lg)', padding: '4px 0', minWidth: 260,
             zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,.4)',
           }}>
             {projects.map(p => (
@@ -56,6 +84,57 @@ export default function TopBar() {
                 </span>
               </button>
             ))}
+
+            {/* Divider */}
+            <div style={{ borderTop: '1px solid var(--df-border-2)', margin: '4px 0' }} />
+
+            {/* Manual path input */}
+            <div style={{ padding: '6px 12px' }}>
+              <div style={{ fontSize: 10, color: 'var(--df-text-4)', marginBottom: 4 }}>
+                Add project by path
+              </div>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <input
+                  ref={inputRef}
+                  value={addPath}
+                  onChange={e => { setAddPath(e.target.value); setAddStatus('idle'); }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddPath(); }}
+                  placeholder="/absolute/path/to/project"
+                  disabled={addStatus === 'loading'}
+                  style={{
+                    flex: 1, fontSize: 11, padding: '3px 6px',
+                    background: 'var(--df-input-bg, var(--df-bg))',
+                    border: '1px solid var(--df-border-2)',
+                    borderRadius: 'var(--df-r-sm)', color: 'var(--df-text)',
+                    fontFamily: 'inherit', outline: 'none',
+                    opacity: addStatus === 'loading' ? 0.6 : 1,
+                  }}
+                />
+                <button
+                  onClick={handleAddPath}
+                  disabled={addStatus === 'loading' || !addPath.trim()}
+                  style={{
+                    padding: '3px 8px', fontSize: 11, cursor: 'pointer',
+                    background: 'var(--df-accent)', color: 'var(--df-accent-text)',
+                    border: 'none', borderRadius: 'var(--df-r-sm)',
+                    fontFamily: 'inherit',
+                    opacity: (addStatus === 'loading' || !addPath.trim()) ? 0.5 : 1,
+                  }}
+                >
+                  {addStatus === 'loading' ? '…' : 'Add'}
+                </button>
+              </div>
+              {addStatus === 'ok' && (
+                <div style={{ fontSize: 10, color: 'var(--df-green, #4caf50)', marginTop: 4 }}>
+                  ✓ Project added
+                </div>
+              )}
+              {addStatus === 'err' && (
+                <div style={{ fontSize: 10, color: 'var(--df-red, #f44336)', marginTop: 4 }}>
+                  ✗ {addError}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
