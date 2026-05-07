@@ -2,7 +2,7 @@
 name: devloop-architect
 description: DevLoop architect. Designs precise implementation specs for Copilot. Called by orchestrator with a feature description. Returns Task ID and spec summary.
 tools: Bash, Read, Glob, Grep
-model: opus
+model: sonnet
 color: blue
 ---
 
@@ -25,7 +25,7 @@ devloop architect "[feature]" [type] "[file hints]"
 ```
 
 ### 4. Return to orchestrator
-- Task ID (e.g. `TASK-20260504-0930`)
+- Task ID (e.g. `TASK-20260504-093022`)
 - 2-sentence summary of what the spec covers
 - Key signatures from the spec
 

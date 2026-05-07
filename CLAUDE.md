@@ -1,3 +1,45 @@
+# Claude Code — DevLoop Project
+
+## System
+This project uses the DevLoop multi-agent pipeline:
+- `devloop-orchestrator` — main thread, receives remote instructions
+- `devloop-architect`    — subagent, designs implementation specs
+- `devloop-reviewer`     — subagent, reviews the worker's implementation
+- Worker — implements specs (CLI or cloud Copilot coding agent)
+- Provider routing and worker mode are controlled in `devloop.config.sh`
+
+## Start the system
+```bash
+devloop start
+```
+Then connect from claude.ai/code or the Claude mobile app.
+
+## DevLoop commands
+- `devloop architect "feature"` — design a spec
+- `devloop work [TASK-ID]`      — launch worker to implement
+- `devloop review [TASK-ID]`    — review implementation
+- `devloop fix [TASK-ID]`       — launch worker with fix instructions
+- `devloop tasks`               — list all specs
+- `devloop status [TASK-ID]`    — show spec + review
+- `devloop open [TASK-ID]`      — open spec in $EDITOR
+- `devloop block [TASK-ID]`     — print Copilot Instructions Block
+- `devloop clean [--days N]`    — remove old specs
+- `devloop learn [TASK-ID]`     — extract lessons from review and save to CLAUDE.md
+- `devloop hooks`               — install Claude pipeline hooks
+- `devloop logs [TYPE]`         — show pipeline/notification/session logs
+- `devloop doctor`              — validate dependencies and configuration
+- `devloop ci`                  — generate GitHub Actions review workflow
+- `devloop check`               — check for DevLoop updates
+- `devloop update`              — self-upgrade devloop
+
+## Stack
+See devloop.config.sh for project-specific stack details.
+
+## Learned Patterns
+<!-- devloop learn appends dated lessons here -->
+
+---
+
 # DocuFlow — AI Documentation Assistant
 
 DocuFlow is an MCP server that gives you structured access to this codebase and maintains a living wiki.
@@ -10,9 +52,9 @@ It is registered in your Claude Desktop config and available as MCP tools in eve
 - **list_modules** — Walk a directory and extract facts for every non-binary file. Use this to understand the full project in one call.
   - Example: `list_modules({ path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp" })`
 - **write_spec** — Persist a markdown spec to `.docuflow/specs/<filename>.md` and update the index.
-  - Example: `write_spec({ project_path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp", filename: "UserService", content: "# UserService\n..." })`
+  - Example: `write_spec({ project_path: "...", filename: "UserService", content: "# UserService\n..." })`
 - **read_specs** — Read previously written specs, optionally filtered by name.
-  - Example: `read_specs({ project_path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp" })`
+  - Example: `read_specs({ project_path: "..." })`
 
 ## Wiki Pipeline Tools
 
@@ -34,20 +76,20 @@ It is registered in your Claude Desktop config and available as MCP tools in eve
 
 ### First time — understand the codebase
 ```
-list_modules({ path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp" })
+list_modules({ path: "..." })
 → read the language breakdown and dependency map
 → write_spec each important module
 ```
 
 ### Ongoing — answer a question
 ```
-query_wiki({ project_path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp", question: "How does authentication work?" })
+query_wiki({ project_path: "...", question: "How does authentication work?" })
 → save_answer_as_page if the answer is worth keeping
 ```
 
 ### Maintenance — check wiki health
 ```
-lint_wiki({ project_path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp" })
+lint_wiki({ project_path: "..." })
 → fix orphans and broken refs
 ```
 
@@ -55,7 +97,7 @@ lint_wiki({ project_path: "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_doc
 
 ```
 .docuflow/
-├── specs/           Legacy spec files written by write_spec
+├── specs/           Spec files written by write_spec
 ├── wiki/            LLM-generated wiki pages
 │   ├── entities/    Named things (services, APIs, databases)
 │   ├── concepts/    Design patterns, principles, integrations
@@ -148,8 +190,6 @@ The project is configured with `waymark.config.json`:
 ```javascript
 // Claude uses:
 mcp__waymark-docuflow-mcp__read_file({ path: "src/index.ts" })
-
-// Blocked files get rejected with explanation
 ```
 
 ### Writing/Editing Files
@@ -159,16 +199,12 @@ mcp__waymark-docuflow-mcp__write_file({
   path: "src/newFeature.ts", 
   content: "..." 
 })
-
-// Sensitive files require approval
 ```
 
 ### Running Commands
-```bash
+```javascript
 // Claude uses:
 mcp__waymark-docuflow-mcp__bash({ command: "npm test" })
-
-// Dangerous commands are rejected automatically
 ```
 
 ## Troubleshooting
@@ -196,21 +232,6 @@ To modify allowed paths or commands:
 2. Changes require approval in the Waymark dashboard
 3. Once approved, new policy takes effect immediately
 4. All future operations follow the new policy
-
-**Example: Adding a new allowed path**
-```json
-{
-  "policies": {
-    "allowedPaths": [
-      "src/**",
-      "lib/**",
-      "scripts/**",  // ← Add new path
-      "*.json",
-      "*.md"
-    ]
-  }
-}
-```
 
 ---
 
@@ -268,7 +289,3 @@ Pending and recent actions are visible in the
 Waymark dashboard. Run `npx @way_marks/cli status`
 to see the current dashboard URL for this project.
 Approve pending actions there. Roll back any write there.
-
-## This file was generated by Waymark
-Do not delete or modify this file.
-It controls how Claude Code behaves in this project.
