@@ -11,6 +11,7 @@
  */
 
 import { exec }   from 'node:child_process';
+import http       from 'node:http';
 import path       from 'node:path';
 import os         from 'node:os';
 import fs         from 'node:fs';
@@ -168,6 +169,27 @@ function openBrowser(url: string): void {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
+
+
+// ── Port conflict helper ──────────────────────────────────────────────────────
+// Returns true if a DocuFlow server is already answering on this port.
+function pingDocuflow(port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const req = http.get(
+      { hostname: 'localhost', port, path: '/api/ping', timeout: 1500 },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk: Buffer) => { body += chunk; });
+        res.on('end', () => {
+          try { resolve((JSON.parse(body) as { ok?: boolean }).ok === true); }
+          catch { resolve(false); }
+        });
+      },
+    );
+    req.on('error',   () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
 
 export interface UiOptions {
   /** HTTP port. Defaults to 48821 (matches the UI's hardcoded API_BASE). */
@@ -376,13 +398,27 @@ export async function run(opts: UiOptions = {}): Promise<void> {
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`\n  ❌ Port ${port} is already in use.`);
-      console.error(`  Stop the other process or set DOCUFLOW_PORT=<port> to use a different port.`);
-      console.error(`  Note: the built UI targets port 48821 — custom ports require a UI rebuild.\n`);
+      // Check if it's already our own server before erroring
+      pingDocuflow(port).then(isDocuflow => {
+        if (isDocuflow) {
+          const url = `http://localhost:${port}`;
+          console.log('');
+          console.log('  ✅ DocuFlow is already running — reusing existing server.');
+          console.log(`  🌐 ${url}`);
+          console.log('');
+          if (!opts.noOpen) openBrowser(url);
+          process.exit(0);
+        }
+        // Different process owns the port
+        console.error(`\n  ❌ Port ${port} is already in use by another process.`);
+        console.error(`  Find and stop it:  lsof -ti:${port} | xargs kill`);
+        console.error(`  Or try:            DOCUFLOW_PORT=48822 docuflow ui\n`);
+        process.exit(1);
+      });
     } else {
       console.error(`\n  ❌ Server error: ${err.message}\n`);
+      process.exit(1);
     }
-    process.exit(1);
   });
 
   // Graceful shutdown
