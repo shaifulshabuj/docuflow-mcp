@@ -1,6 +1,52 @@
 # Docuflow Feature Reference
 
-Complete feature inventory for **Docuflow v0.4.0** — an MCP server that gives AI agents structured access to codebases and persistent LLM Wiki knowledge bases.
+Complete feature inventory for **Docuflow v0.6.0** — an MCP server with a live web interface that gives AI agents structured access to codebases and persistent LLM Wiki knowledge bases.
+
+---
+
+## Web UI (v0.6.0)
+
+A Vite + React 18 interface for DocuFlow. Launch with `npm run start-api` + `npm run start-web`, then open `http://localhost:5173`.
+
+| View | What it shows |
+|------|--------------|
+| **Ask** | AI-powered Q&A with wiki citations — type a question, watch DocuFlow search and synthesise an answer with source links |
+| **Wiki** | Live page browser with category tree (Entities / Concepts / Syntheses / Timelines); click any page to read its real markdown content |
+| **Graph** | Dependency visualiser — all wiki pages rendered as an interactive node graph with colour-coded node kinds |
+| **Health** | Wiki quality dashboard — real-time health score (0–100), stale and orphan page counts, open issues with fix buttons |
+| **Sync** | Daemon activity monitor — status (Listening/Paused), AI bridge detected, last run time, recent log timeline |
+| **Onboard** | New project setup wizard — choose domain, name your project, get a ready-to-run init command |
+
+**Key features**
+- Auto-discovers all DocuFlow projects in `~/dev`, `~/code`, `~/projects`, `~/work`, `~/src`, `~/Desktop`
+- Project picker in TopBar when multiple projects are found
+- Live data for all views; graceful demo fallback when API server is offline
+- TopBar status dot: green (API live) / grey (demo mode)
+- `packages/ui/docuflow-playwright-test.mjs` — Playwright walkthrough script for recording UI walkthroughs
+
+---
+
+## HTTP API Bridge (v0.6.0)
+
+Express server on port 48821. Imports MCP tool functions directly from `packages/server/src/tools/` — no subprocess overhead, sub-millisecond call latency.
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/ping` | Health check — returns `{ ok: true }` |
+| `GET /api/projects` | Scan `~/dev`, `~/code`, etc. — return all discovered DocuFlow projects with stats |
+| `GET /api/project?path=…` | Stats for one project (name, health score, page count, entities, last ingest) |
+| `GET /api/wiki?path=…` | List all wiki pages grouped by category with stale flag |
+| `GET /api/wiki/:pageId?path=…` | Read one wiki page's full markdown content |
+| `GET /api/health?path=…` | Full lint report — health score, stale pages, orphans, open issues |
+| `GET /api/activity?path=…` | Recent activity parsed from `.docuflow/log.md` (last 10 operations) |
+| `POST /api/ask` | Body: `{ path, question }` — runs `query_wiki`, returns synthesised answer with citations |
+| `GET /api/search?path=…&q=…` | BM25 search across all wiki pages |
+
+**Start commands**
+```bash
+npm run start-api    # API bridge on http://localhost:48821
+npm run start-web    # Vite dev server on http://localhost:5173
+```
 
 ---
 
@@ -43,7 +89,7 @@ Complete feature inventory for **Docuflow v0.4.0** — an MCP server that gives 
 
 ---
 
-## CLI Commands (3 total)
+## CLI Commands (6 total)
 
 | Command | Description |
 |---------|-------------|
@@ -51,6 +97,8 @@ Complete feature inventory for **Docuflow v0.4.0** — an MCP server that gives 
 | `docuflow init --interactive` / `init -i` | Guided interactive setup: prompts for domain (Code/Research/Business/Personal), project name, description. Generates domain-specific schema, planning template (`PLAN.md`), and `CLAUDE.md`. |
 | `docuflow status` | Shows: Docuflow version, MCP registration status, `CLAUDE.md` present/missing, wiki page counts by category (entities/concepts/syntheses/timelines), source file count, last ingest date from `log.md`, and smart hints (e.g., suggests `docuflow suggest` if wiki is empty). |
 | `docuflow suggest` | Domain-aware first-steps guidance. Reads `.docuflow/schema.md` for domain detection, counts existing wiki pages and sources. Prints 5 prioritised starting-point suggestions with reasons and ready-to-paste Claude prompt starters. |
+| `docuflow watch [stop\|status\|restart]` | Background auto-sync daemon. Watches `.docuflow/sources/` for new files (ingests in <1s) and project code files (debounced AI doc generation). Lifecycle: `watch stop`, `watch status`, `watch restart`. |
+| `docuflow sync [--ai] [--source file] [--no-lint] [--quiet]` | One-shot sync for CI/CD and git hooks. Re-ingests all sources, rebuilds index, runs health check. `--ai` uses the best available AI bridge (Copilot → Claude Code → Codex). |
 
 ---
 
@@ -141,8 +189,7 @@ The `most_connected` field returns the top 10 nodes by total edge count — thes
 
 ## What Docuflow Does NOT Do
 
-- ❌ No AI calls inside the server (agents provide the intelligence)
-- ❌ No automatic triggers (nothing watches for file changes)
+- ❌ No AI calls inside the MCP server (agents provide the intelligence)
 - ❌ No SVN/Git history analysis
 - ❌ No Word/Excel document ingestion (markdown sources only)
 - ❌ No real-time collaboration (single-user filesystem tool)
