@@ -12,6 +12,7 @@
 
 import { exec }   from 'node:child_process';
 import path       from 'node:path';
+import os         from 'node:os';
 import fs         from 'node:fs';
 import fsp        from 'node:fs/promises';
 import express    from 'express';
@@ -220,26 +221,43 @@ export async function run(opts: UiOptions = {}): Promise<void> {
 
   app.get('/api/projects', async (req, res) => {
     try {
-      const home = process.env.HOME ?? process.env.USERPROFILE ?? '/';
+      // ── Path-scoped query: only search within the provided path ──────────
+      if (typeof req.query.path === 'string') {
+        const qp = req.query.path as string;
+        // Direct match: the path itself is a docuflow project
+        if (fs.existsSync(path.join(qp, '.docuflow'))) {
+          return res.json([await getProjectStats(qp, lintWikiTool)]);
+        }
+        // Nested: scan one level inside the provided path
+        const nested = await findDocuflowProjects(qp);
+        if (nested.length === 0) return res.json([]); // not found — no fallback to global scan
+        const nestedProjects = await Promise.all(nested.map(p => getProjectStats(p, lintWikiTool)));
+        return res.json(nestedProjects.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+
+      // ── Full auto-discovery across common dev directories ─────────────────
+      const home = process.env.HOME ?? process.env.USERPROFILE ?? os.homedir();
       const scanRoots = [
         home,
         path.join(home, 'code'),  path.join(home, 'dev'),
         path.join(home, 'projects'), path.join(home, 'work'),
         path.join(home, 'src'),   path.join(home, 'Desktop'),
       ];
-
-      if (typeof req.query.path === 'string') {
-        const qp = req.query.path as string;
-        if (fs.existsSync(path.join(qp, '.docuflow'))) {
-          return res.json([await getProjectStats(qp, lintWikiTool)]);
-        }
-        scanRoots.push(qp);
-      }
-
       const allPaths = new Set<string>();
       for (const root of scanRoots) {
         (await findDocuflowProjects(root)).forEach(p => allPaths.add(p));
       }
+
+      // Also include projects registered via `docuflow init` global registry
+      try {
+        const registryPath = path.join(os.homedir(), '.docuflow', 'projects.json');
+        const raw = await fsp.readFile(registryPath, 'utf8');
+        const registry = JSON.parse(raw) as { projects?: string[] };
+        (registry.projects ?? []).forEach(p => {
+          if (fs.existsSync(path.join(p, '.docuflow'))) allPaths.add(p);
+        });
+      } catch { /* registry doesn't exist yet — skip */ }
+
       const projects = await Promise.all([...allPaths].map(p => getProjectStats(p, lintWikiTool)));
       return res.json(projects.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (e: unknown) {

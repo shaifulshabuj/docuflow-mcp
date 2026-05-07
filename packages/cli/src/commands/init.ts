@@ -3,6 +3,32 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
+// ── Global project registry ───────────────────────────────────────────────────
+// ~/.docuflow/projects.json  — written by `docuflow init` so the UI can always
+// find all initialized projects regardless of where they live on disk.
+
+const GLOBAL_REGISTRY = path.join(os.homedir(), ".docuflow", "projects.json");
+
+export async function registerInGlobalRegistry(projectPath: string): Promise<void> {
+  try {
+    const dir = path.dirname(GLOBAL_REGISTRY);
+    await fsp.mkdir(dir, { recursive: true });
+
+    let registry: { version: number; projects: string[] } = { version: 1, projects: [] };
+    try {
+      const raw = await fsp.readFile(GLOBAL_REGISTRY, "utf8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.projects)) registry = parsed;
+    } catch { /* file doesn't exist yet */ }
+
+    if (!registry.projects.includes(projectPath)) {
+      registry.projects.push(projectPath);
+      await fsp.writeFile(GLOBAL_REGISTRY, JSON.stringify(registry, null, 2) + "\n", "utf8");
+    }
+  } catch { /* non-fatal — registry is best-effort */ }
+}
+
+
 function getClaudeDesktopConfigPath(): string {
   const platform = process.platform;
   if (platform === "darwin") {
@@ -380,6 +406,9 @@ export async function run(): Promise<void> {
 
   // Install git post-commit hook (auto-sync on every commit)
   await installGitHook(projectDir);
+
+  // Register in global project registry so `docuflow ui` always finds this project
+  await registerInGlobalRegistry(projectDir);
 
   console.log("\u2713 DocuFlow initialised successfully.");
   console.log("");

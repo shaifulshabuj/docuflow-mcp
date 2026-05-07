@@ -3,7 +3,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
-import { buildClaudeMd } from "./init";
+import { buildClaudeMd, registerInGlobalRegistry } from "./init";
 
 type Domain = "code" | "research" | "business" | "personal";
 
@@ -373,6 +373,9 @@ Record of all wiki operations.
     await fsp.writeFile(claudeMdPath, claudeMdContent, "utf8");
   }
   console.log("  ✓ Created CLAUDE.md (Claude Code will read DocuFlow tool instructions automatically)");
+
+  // Register in global project registry so `docuflow ui` always finds this project
+  await registerInGlobalRegistry(process.cwd());
 
   console.log("\n✅ Wiki successfully initialized!\n");
 
