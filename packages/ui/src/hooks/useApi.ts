@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:48821';
 
-export async function apiFetch<T>(endpoint: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${endpoint}`);
+export async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, init);
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json() as Promise<T>;
 }
