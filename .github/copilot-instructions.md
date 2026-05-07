@@ -1,199 +1,201 @@
 # Copilot Instructions for Docuflow MCP
 
-## Build, Test & Lint
+> **v0.6.0** — 4-package npm monorepo | 15 MCP tools | 8 CLI commands | Web UI on port 48821
 
-**Monorepo build (both packages):**
+---
+
+## 🎓 Active Skills
+
+Three accumulated skill documents guide all work on this project. Read the relevant one **before starting any task**.
+
+| Task type | Skill file | Claude command |
+|-----------|-----------|----------------|
+| Building features, adding commands, fixing bugs | `.claude/commands/df-develop.md` | `/project:df-develop` |
+| Running checks, debugging TypeScript, smoke testing | `.claude/commands/df-test.md` | `/project:df-test` |
+| Pre-release prep, version bumps, changelog, publishing | `.claude/commands/df-release.md` | `/project:df-release` |
+
+Each skill file contains:
+- Established patterns with code examples
+- Anti-patterns that caused real bugs
+- Quick-reference commands
+- A **Learning Log** (append new discoveries after each session — this is what makes skills auto-improving)
+
+---
+
+## 📦 Monorepo Layout
+
+```
+docuflow-mcp/                    ← private root workspace
+├── packages/
+│   ├── server/  @doquflow/server   ← 15 MCP tools, published to npm
+│   ├── cli/     @doquflow/cli      ← 8 CLI commands + web UI server, published to npm
+│   ├── ui/      @docuflow/ui       ← Vite+React 18, private (bundled into CLI)
+│   └── api/     @docuflow/api      ← Express dev bridge, private
+├── scripts/
+│   ├── release.js                  ← interactive version bump + git tag + push
+│   └── pre-release-check.sh        ← 47-check validation suite
+├── .claude/commands/               ← project skill files (Claude slash commands)
+└── release/                        ← public-facing docs (synced to npm repo)
+```
+
+**Only `@doquflow/server` and `@doquflow/cli` are published to npm.**
+UI is pre-built into `packages/cli/ui-dist/` at build time.
+
+---
+
+## 🛠️ Development Skill (condensed)
+
+Full details: `.claude/commands/df-develop.md`
+
+### Critical rules
+- **TypeScript strict:** UI has `noUnusedLocals: true` — zero unused vars allowed
+- **Build order:** `server → ui → cli → api` (UI must exist before CLI copies it)
+- **Port 48821:** single server serves both `/api/*` routes and static UI — never split
+- **Binaries:** use root `node_modules/.bin/tsc`, NOT `packages/ui/node_modules/.bin/tsc`
+
+### Loading server tools in CLI commands
+```typescript
+type ToolFn = (args: Record<string, any>) => Promise<any>;
+function loadTool(file: string, exportName: string): ToolFn {
+  return (require(`@doquflow/server/dist/tools/${file}`) as Record<string, ToolFn>)[exportName];
+}
+// Load once inside run(), use via closure:
+const listWikiTool = loadTool('list-wiki', 'listWiki');
+```
+
+### Adding a new CLI command — checklist
+1. Create `packages/cli/src/commands/<name>.ts` → export `async function run(opts)`
+2. Register in `packages/cli/src/index.ts` (arg parser + help text)
+3. Add to Section 4 dist loop in `scripts/pre-release-check.sh`
+4. Add distinctive help-text string to Section 7 grep loop
+
+### Express server route order (ui.ts)
+```
+cors() → json() → /api/* routes → express.static(uiDist) → app.get('*') SPA fallback
+```
+Static serving MUST come after all API routes.
+
+---
+
+## 🧪 Testing Skill (condensed)
+
+Full details: `.claude/commands/df-test.md`
+
+### The 5 validation layers (run in order)
 ```bash
-npm run build --workspaces
+# 1. TypeScript — UI (strictest)
+node_modules/.bin/tsc --noEmit -p packages/ui/tsconfig.json
+
+# 2. TypeScript — API
+node_modules/.bin/tsc --noEmit -p packages/api/tsconfig.json
+
+# 3. CLI + Server build
+npm run build -w packages/server && npm run build -w packages/cli
+
+# 4. Full 47-check suite
+bash scripts/pre-release-check.sh   # must show RESULT: PASSED
+
+# 5. Live server smoke test
+DOCUFLOW_PORT=48822 node packages/cli/dist/index.js ui --no-open &
+sleep 2 && curl -s http://localhost:48822/api/ping  # → {"ok":true}
 ```
 
-**Build individual package:**
+### Known failure modes
+| Symptom | Root cause | Fix |
+|---------|-----------|-----|
+| Pre-release check exits code 127, silent | Binary not found + `set -e` killed shell | Always use root `node_modules/.bin/` |
+| TypeScript PASS but binary was missing | `if $(missing) \| grep` silently passes | Verify `ls node_modules/.bin/tsc` |
+| `noUnusedLocals` error on used function | Arrow fn in closure not traced | Redeclare as `function foo()` not `const foo = () =>` |
+| Port 48821 in use | Previous server running | `lsof -ti:48821 \| xargs kill` or `DOCUFLOW_PORT=48822` |
+
+---
+
+## 🚀 Release Skill (condensed)
+
+Full details: `.claude/commands/df-release.md`
+
+### Version alignment — all 4 must match
 ```bash
-npm run build -w packages/server
-npm run build -w packages/cli
+node -e "
+  ['server','cli','ui','api'].forEach(p=>{
+    const pkg=require('./packages/'+p+'/package.json');
+    console.log(p+': '+pkg.version);
+  });
+  console.log('cli dep: '+require('./packages/cli/package.json').dependencies['@doquflow/server']);
+"
 ```
 
-**Run pre-release checks** (before any release):
+### Release sequence
 ```bash
-bash scripts/pre-release-check.sh
+# Step 1: commit all working changes (release.js needs clean git)
+git add <files> && git commit -m "feat: <what was built>"
+
+# Step 2: interactive release (bumps versions, runs 47 checks, commits, tags, pushes)
+node scripts/release.js
+# → prompts: major / minor / patch
+# → must pass 47/47 pre-release checks to proceed
 ```
 
-**Automated release** (bump version + push tag):
-```bash
-npm run release
-```
+### What to update for every feature release
+- `CHANGELOG.md` → `[Unreleased]` Added section
+- `release/CHANGELOG.md` → same entry (public)
+- `FEATURES.md` → update tables and counts
+- `release/README.md` → update CLI table + Features list
+- `scripts/pre-release-check.sh` → new dist file + help text checks
 
-The project uses **TypeScript** with no test suite — validation happens via:
-- TypeScript compiler (`tsc`)
-- Pre-release checks in `scripts/pre-release-check.sh` (builds, secrets scan, file integrity)
-- Release script in `scripts/release.js` (interactive version bumping + changelog generation)
-- GitHub Actions CI on every push/PR
+---
 
-## High-Level Architecture
+## 🏗️ Architecture Reference
 
-**Docuflow** is an MCP (Model Context Protocol) server that extracts structural information from codebases and persists living specs.
+### CLI Commands (8 total)
+| Command | What it does |
+|---------|-------------|
+| `docuflow init` | Create `.docuflow/`, register MCP, write `CLAUDE.md` |
+| `docuflow init --interactive` | Guided domain setup |
+| `docuflow status` | Wiki stats, MCP registration, version |
+| `docuflow suggest` | Domain-aware first-steps (5 suggestions) |
+| `docuflow ui` | Start web interface (API + static UI on port 48821) |
+| `docuflow start` | Alias for `ui` |
+| `docuflow watch [--ai]` | Background auto-sync daemon |
+| `docuflow sync [--ai]` | One-shot sync for CI/CD |
 
-```
-User/Agent (e.g., Claude Code)
-        ↓ (MCP protocol / stdio)
-Docuflow MCP Server
-        ↓ (filesystem operations only)
-Project directory (read files) + .docuflow/specs/ (write specs)
-```
+### MCP Tools (15 total)
+Code: `read_module`, `list_modules`, `write_spec`, `read_specs`
+Wiki: `ingest_source`, `update_index`, `list_wiki`, `wiki_search`, `query_wiki`, `answer_synthesis`, `save_answer_as_page`
+Health: `lint_wiki`, `get_schema_guidance`, `preview_generation`
+Graph: `generate_dependency_graph`
 
-### Core Design Principles
+### Web UI (port 48821)
+6 views: Ask, Wiki, Graph, Health, Sync, Onboard
+API routes: `/api/ping`, `/api/projects`, `/api/project`, `/api/wiki`, `/api/wiki/:pageId`, `/api/health`, `/api/activity`, `/api/ask`, `/api/search`
 
-- **Stateless extraction**: The server does not persist state; agents make all decisions
-- **Universal language support**: Single regex-based extractor (`packages/server/src/extractor.ts`) handles TypeScript, Python, C#, Java, SQL, and more
-- **Zero external dependencies**: No API calls, no AI services, no vendor lock-in — only Node.js stdlib and MCP SDK
-- **Stdio transport**: Runs as a subprocess with stdio-based request/response
+---
 
-### Monorepo Layout
+## 🔑 Key Conventions
 
-```
-packages/
-├── server/          @doquflow/server — MCP server (main logic)
-│   ├── src/
-│   │   ├── index.ts           MCP server bootstrap + tool registration
-│   │   ├── types.ts           Shared interfaces (ModuleInfo, ListResult, etc.)
-│   │   ├── extractor.ts       Universal regex-based extraction engine
-│   │   ├── filesystem.ts      File utilities (walk, isBinary, safeReadFile)
-│   │   ├── language-map.ts    Filetype → language name mapping
-│   │   └── tools/             MCP tool handlers
-│   │       ├── read-module.ts    Single file analysis
-│   │       ├── list-modules.ts   Bulk directory scan
-│   │       ├── write-spec.ts     Persist specs with index write lock
-│   │       └── read-specs.ts     Query existing specs
-│   └── package.json
-│
-├── cli/             @doquflow/cli — Setup + diagnostics
-│   ├── src/
-│   │   ├── index.ts
-│   │   └── commands/
-│   │       ├── init.ts            Register MCP server in Claude Desktop config
-│   │       └── status.ts          Show spec count + registration state
-│   └── package.json
-│
-release/            Public-facing docs (synced to doquflows/docuflow repo)
-scripts/            Pre-release validation
-.github/workflows/  CI + automated release
-```
+### Secrets & git hygiene
+- `.env` must never be committed (pre-release check enforces this)
+- `packages/ui/` and `packages/api/` are `private: true` — never publish them
+- No `docuflow-mcp` string allowed in source code (stale name check)
 
-### The Four MCP Tools
+### Changelog discipline
+Write `[Unreleased]` entries **as you develop**, not all at once before release. Both `CHANGELOG.md` and `release/CHANGELOG.md` must stay in sync.
 
-1. **read_module** — Extract structured info from a single file
-   - Input: `path` (file path)
-   - Output: `ModuleInfo` with classes, functions, dependencies, tables, endpoints, config refs, raw content (truncated at 8000 chars)
+### Workspace binaries
+All dev tool binaries (tsc, vite, tsx, playwright) are hoisted to root `node_modules/.bin/`. Per-package `node_modules/.bin/` entries do NOT exist.
 
-2. **list_modules** — Bulk directory scan (no raw content)
-   - Input: `path` (root dir), `extensions?` (filter, e.g., `[".ts", ".js"]`)
-   - Output: `ListResult` with all modules found
-   - Auto-skips: `node_modules`, `dist`, `build`, `.git`, `vendor`, `obj`, `bin`, `.docuflow`, `*.min.js`, `*.map`, `*.lock`, files >300KB
-
-3. **write_spec** — Persist a markdown spec to `.docuflow/specs/`
-   - Input: `project_path`, `filename`, `content`
-   - Output: Write path, bytes written, index update confirmation
-   - Lock: Index file protected by atomic write to prevent conflicts
-
-4. **read_specs** — Query existing specs
-   - Input: `project_path`, `module_name?` (filter by module)
-   - Output: Array of specs with filename and content
-
-### Extraction Engine
-
-`packages/server/src/extractor.ts` is the universal text processor. It recognizes:
-
-| Field | Examples |
-|-------|----------|
-| **classes** | `class Foo`, `interface Bar`, `struct Baz`, `enum Color`, `record Point` |
-| **functions** | Method declarations, arrow functions, labeled by keyword (async, static, public, etc.) |
-| **dependencies** | `using X`, `import Y from Z`, `require()`, decorators, `new ClassName()` |
-| **db_tables** | `FROM table_name`, `DbSet<T>`, `[Table("name")]`, EF property access (`_db.Users`) |
-| **endpoints** | .NET attributes, `app.MapGet()`, Express/NestJS routers, Angular route metadata |
-| **config_refs** | `IConfiguration`, `appsettings.json`, `ConnectionStrings:*`, `process.env.*` |
-
-The extractor is **language-agnostic** — it uses line-matching regex patterns, so each language contributes its own patterns naturally.
-
-## Key Conventions
-
-### Version Management & Release
-
-**Use the automated release script** (recommended):
-```bash
-npm run release
-```
-
-This interactive script handles version bumping, changelog updates, pre-release checks, git operations, and pushes — all in one command. See [RELEASE.md](../RELEASE.md) for detailed documentation.
-
-**Manual release** (legacy approach):
-If you need manual control, the critical rule remains:
-
-> **Always bump versions in package.json BEFORE creating a git tag.**
-> The CI publishes whatever version is in `package.json` at tag time.
-
-Manual steps:
-1. Edit `packages/server/package.json` → bump `version`
-2. Edit `packages/cli/package.json` → bump `version` AND `@doquflow/server` dep version
-3. Update `CHANGELOG.md` (private) and `release/CHANGELOG.md` (public)
-4. Run `npm install --package-lock-only` to regenerate lockfile
-5. Run `bash scripts/pre-release-check.sh` → must show `RESULT: PASSED`
-6. Commit: `git add -A && git commit -m "chore: bump to vX.Y.Z"`
-7. Tag: `git tag vX.Y.Z`
-8. Push: `git push origin main && git push origin vX.Y.Z`
-
-GitHub Actions handles the rest: build → sync to `doquflows/docuflow` → npm publish → GitHub Release.
-
-### Workspace Structure & Package Names
-
-- Server package: **@doquflow/server** (not `docuflow-mcp`)
-- CLI package: **@doquflow/cli** (not `docuflow-mcp`)
-- No stale references to `docuflow-mcp` allowed in source code (checked in pre-release)
-
-### Secrets & Security
-
-The pre-release check prevents:
-- `.env` files from being tracked
-- Database files (`.db`) in git
-- Secrets (API keys, tokens) in history
-
-CI also scans for patterns like `sk-ant`, `ANTHROPIC_API_KEY`, `npm_*` in source files.
-
-### Source File Structure
-
-Each package follows:
-```
-src/
-├── index.ts           Entry point
-├── types.ts or ...ts  Type definitions / core logic
-├── {feature}.ts       Named modules
-└── {subfolder}/       Feature subfolders (e.g., tools/)
-```
-
-TypeScript compiles to `dist/` (gitignored).
-
-### Dependencies
-
-- Server: Only `@modelcontextprotocol/sdk` (required)
-- CLI: Only `@doquflow/server` (required)
-- Dev: `typescript`, `@types/node`
-
-Minimal dependencies by design — the server should be lightweight and portable.
-
-### Published Artifacts
-
-- **npm**: `@doquflow/server` and `@doquflow/cli` (CI auto-publishes on tag)
-- **Public GitHub**: `doquflows/docuflow` (synced from `release/` on tag)
-- **Private dev repo**: This repo (`docuflow-mcp`)
-
-The `release/` folder contains public-facing docs/binaries that are synced to the public repo during CI.
+---
 
 ## Recommended MCP Servers
 
-For Copilot sessions in this repository, configure these MCP servers in `~/.copilot/mcp.json`:
+For Copilot sessions in this repository:
 
-**GitHub MCP** — Access repository data, issues, workflows, and commits
-- Useful for: understanding release workflows, checking CI status, querying GitHub Actions, reviewing issues
-- Enable if: you need to cross-reference the public `doquflows/docuflow` repo or check release automation
+**GitHub MCP** — Repository data, issues, workflows, CI status
+- Useful for: checking release CI, querying the public `doquflows/docuflow` repo
 
-**Filesystem MCP** — Enhanced file browsing and search
-- Useful for: navigating the large `packages/*/src/` directory, searching across multiple files
+**Filesystem MCP** — Enhanced file browsing
+- Useful for: navigating `packages/*/src/`, cross-package searches
+
+**DocuFlow MCP** — This project's own wiki knowledge base
+- Run `docuflow init` if not already registered
+- Use `query_wiki` for questions about the codebase

@@ -27,7 +27,17 @@ if (cmd === '--version' || cmd === '-v') {
 } else if (cmd === 'suggest') {
   import('./commands/suggest').then(m => m.run());
 
-// ── NEW: watch — auto-sync daemon ───────────────────────────────────────────
+// ── ui / start — web interface ───────────────────────────────────────────────
+} else if (cmd === 'ui' || cmd === 'start') {
+  const portFlag = getFlagValue('--port');
+  import('./commands/ui').then(m =>
+    m.run({
+      port:   portFlag ? parseInt(portFlag, 10) : undefined,
+      noOpen: hasFlag('--no-open'),
+    })
+  );
+
+// ── watch — auto-sync daemon ─────────────────────────────────────────────────
 } else if (cmd === 'watch') {
   const subCmd = rest[0];
 
@@ -41,7 +51,6 @@ if (cmd === '--version' || cmd === '-v') {
     import('./commands/watch-stop').then(m => m.runRestart(process.cwd()));
 
   } else {
-    // Normal watch start
     const lintHours = getFlagValue('--lint-interval');
     const codeExt   = getFlagValue('--code-ext');
     import('./commands/watch').then(m =>
@@ -57,7 +66,7 @@ if (cmd === '--version' || cmd === '-v') {
     );
   }
 
-// ── NEW: sync — one-shot sync for CI/CD and git hooks ───────────────────────
+// ── sync — one-shot sync for CI/CD and git hooks ─────────────────────────────
 } else if (cmd === 'sync') {
   const sinceCommit = getFlagValue('--since-commit');
   const sourceFile  = getFlagValue('--source');
@@ -87,6 +96,10 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  init --interactive      Interactive setup wizard');
   console.log('  status                  Show wiki health, page counts, and MCP status');
   console.log('  suggest                 Show what to document first (domain-specific)');
+  console.log('  ui                      Start the DocuFlow web interface (API + UI on port 48821)');
+  console.log('  start                   Alias for "ui" — same web interface');
+  console.log('  ui --port <n>           Use a custom port (default: 48821)');
+  console.log('  ui --no-open            Start server without auto-opening the browser');
   console.log('  watch                   Start auto-sync daemon (watches for changes)');
   console.log('  watch --ai              Auto-detect best AI bridge (copilot > claude > codex > api)');
   console.log('  watch --ai --copilot    Force @github/copilot CLI (direct MCP tool calling ⚡)');

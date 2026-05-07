@@ -73,7 +73,7 @@ done
 
 echo ""
 echo "Checking compiled dist files..."
-for cmd in init init-interactive status suggest watch watch-stop sync; do
+for cmd in init init-interactive status suggest watch watch-stop sync ui start; do
   f="packages/cli/dist/commands/${cmd}.js"
   [ -f "$f" ] && check "dist: ${cmd}.js compiled" "pass" || check "dist: ${cmd}.js compiled" "fail"
 done
@@ -81,6 +81,11 @@ done
 for f in packages/server/dist/index.js packages/cli/dist/index.js; do
   [ -f "$f" ] && check "dist: $f exists" "pass" || check "dist: $f exists" "fail"
 done
+
+# UI bundle bundled into CLI package
+[ -f "packages/cli/ui-dist/index.html" ] \
+  && check "CLI ui-dist/index.html bundled" "pass" \
+  || check "CLI ui-dist/index.html bundled" "fail"
 
 # ── 5. Package metadata — all four packages ───────────────────────────────────
 
@@ -151,7 +156,7 @@ else
 fi
 
 HELP=$(node packages/cli/dist/index.js 2>&1)
-for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "--copilot" "--claude"; do
+for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "--copilot" "--claude" "ui --port" "Alias for"; do
   echo "$HELP" | grep -qe "$cmd" \
     && check "help contains: $cmd" "pass" \
     || check "help contains: $cmd" "fail"
@@ -172,14 +177,14 @@ echo ""
 echo "Checking UI and API builds..."
 
 # UI: TypeScript strict check
-if packages/ui/node_modules/.bin/tsc --noEmit -p packages/ui/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/ui/tsconfig.json 2>&1 | grep -q "error TS"; then
   check "UI TypeScript strict check (0 errors)" "fail"
 else
   check "UI TypeScript strict check (0 errors)" "pass"
 fi
 
 # UI: production build (vite)
-UI_BUILD_OUT=$(packages/ui/node_modules/.bin/vite build packages/ui 2>&1)
+UI_BUILD_OUT=$(node_modules/.bin/vite build packages/ui 2>&1)
 if echo "$UI_BUILD_OUT" | grep -qE "error|Error|failed"; then
   check "UI production build succeeds (vite build)" "fail"
 else
@@ -192,7 +197,7 @@ fi
   || check "UI dist/index.html produced" "fail"
 
 # API: TypeScript strict check
-if packages/api/node_modules/.bin/tsc --noEmit -p packages/api/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/api/tsconfig.json 2>&1 | grep -q "error TS"; then
   check "API TypeScript strict check (0 errors)" "fail"
 else
   check "API TypeScript strict check (0 errors)" "pass"
