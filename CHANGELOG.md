@@ -1,5 +1,17 @@
 # Docuflow Changelog
 
+## [1.0.0] - 2026-05-07
+
+### Added
+- (Add your changes here)
+
+### Changed
+- (Add your changes here)
+
+### Fixed
+- (Add your changes here)
+
+
 ## [Unreleased] — v0.6.0
 
 Web UI + HTTP API bridge. Fill in before running `npm run release`.
