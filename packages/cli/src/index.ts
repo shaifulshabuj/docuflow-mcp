@@ -86,6 +86,18 @@ if (cmd === '--version' || cmd === '-v') {
     })
   );
 
+// ── review — git change review & improvement suggestions ───────────────────────
+} else if (cmd === 'review') {
+  import('./commands/review').then(m =>
+    m.run({
+      staged: hasFlag('--staged'),
+      sinceCommit: getFlagValue('--since-commit'),
+      ai: hasFlag('--ai'),
+      failOnCritical: hasFlag('--fail-on-critical'),
+      quiet: hasFlag('--quiet', '-q'),
+    })
+  );
+
 } else {
   console.log(`DocuFlow v${version}`);
   console.log('');
@@ -120,6 +132,12 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  sync --no-lint          Skip health check (faster)');
   console.log('  sync --fail-on-score N  Exit 1 if health score < N (default: 70)');
   console.log('  sync --quiet            Suppress output (CI mode)');
+  console.log('  review                  Review current git changes and suggest improvements');
+  console.log('  review --staged         Review staged changes only');
+  console.log('  review --since-commit REF Review changes since git ref (e.g. HEAD~1)');
+  console.log('  review --ai             Append Copilot AI review to deterministic findings');
+  console.log('  review --fail-on-critical Exit 1 if critical findings are detected');
+  console.log('  review --quiet          Compact output for CI/scripting');
   console.log('');
   console.log('Options:');
   console.log('  --version, -v                    Print version number');

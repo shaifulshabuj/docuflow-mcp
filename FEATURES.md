@@ -89,7 +89,7 @@ npm run start-web    # Vite dev server on http://localhost:5173
 
 ---
 
-## CLI Commands (6 total)
+## CLI Commands (7 total)
 
 | Command | Description |
 |---------|-------------|
@@ -99,6 +99,7 @@ npm run start-web    # Vite dev server on http://localhost:5173
 | `docuflow suggest` | Domain-aware first-steps guidance. Reads `.docuflow/schema.md` for domain detection, counts existing wiki pages and sources. Prints 5 prioritised starting-point suggestions with reasons and ready-to-paste Claude prompt starters. |
 | `docuflow watch [stop\|status\|restart]` | Background auto-sync daemon. Watches `.docuflow/sources/` for new files (ingests in <1s) and project code files (debounced AI doc generation). Lifecycle: `watch stop`, `watch status`, `watch restart`. |
 | `docuflow sync [--ai] [--source file] [--no-lint] [--quiet]` | One-shot sync for CI/CD and git hooks. Re-ingests all sources, rebuilds index, runs health check. `--ai` uses the best available AI bridge (Copilot → Claude Code → Codex). |
+| `docuflow review [--staged] [--since-commit REF] [--ai] [--fail-on-critical]` | Reviews current git changes and prints deterministic findings (`critical`, `warnings`, `improvements`). `--ai` appends Copilot review output; `--fail-on-critical` exits with code 1 when critical issues exist. |
 
 ---
 

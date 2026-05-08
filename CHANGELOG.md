@@ -96,6 +96,10 @@ Web UI + HTTP API bridge. Fill in before running `npm run release`.
   - Imports MCP tool functions directly from `packages/server/src/tools/` — no subprocess overhead
   - Parses `.docuflow/log.md` into structured activity feed (supports both heading and pipe-delimited log formats)
 - **Root scripts**: `start-web`, `start-api`, `build:core`, `build:ui`, `build:api`, `prerelease-check`
+- **`docuflow review`** — New git-change review command with deterministic findings and actionable improvements
+  - Supports `--staged` and `--since-commit <ref>` scope selection
+  - `--ai` appends non-fatal Copilot review output when available
+  - `--fail-on-critical` exits with code 1 only when critical findings exist
 - **Release script**: `scripts/release.js` now bumps all four packages (server, cli, ui, api) in one run
 - **Pre-release check**: `scripts/pre-release-check.sh` now validates UI TypeScript, UI production build, and API TypeScript in addition to existing checks
 

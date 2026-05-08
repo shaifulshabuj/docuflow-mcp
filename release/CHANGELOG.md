@@ -83,6 +83,10 @@
   - Auto-discovers DocuFlow projects in `~/dev`, `~/code`, `~/projects`, `~/work`, `~/src`, `~/Desktop`
   - Imports MCP tool functions directly — no subprocess overhead
 - **Quick start scripts**: `npm run start-api` + `npm run start-web` to launch the full UI stack
+- **`docuflow review`** — New git-change review command with deterministic findings and actionable improvements
+  - Supports `--staged` and `--since-commit <ref>` scope selection
+  - `--ai` appends non-fatal Copilot review output when available
+  - `--fail-on-critical` exits with code 1 only when critical findings exist
 
 
 ## [0.5.6] - 2026-05-07
