@@ -289,3 +289,79 @@ Pending and recent actions are visible in the
 Waymark dashboard. Run `npx @way_marks/cli status`
 to see the current dashboard URL for this project.
 Approve pending actions there. Roll back any write there.
+
+<!-- DEVLOOP:CLAUDE:START -->
+# Claude Code — DevLoop Project
+
+## System
+This project uses the DevLoop multi-agent pipeline:
+- `devloop-orchestrator` — main thread, receives remote instructions
+- `devloop-architect`    — subagent, designs implementation specs
+- `devloop-reviewer`     — subagent, reviews the worker's implementation
+- Worker — implements specs (CLI or cloud Copilot coding agent)
+- Provider routing and worker mode are controlled in `devloop.config.sh`
+
+## Start the system
+```bash
+devloop start
+```
+Then connect from claude.ai/code or the Claude mobile app.
+
+## DevLoop commands
+- `devloop architect "feature"` — design a spec
+- `devloop work [TASK-ID]`      — launch worker to implement
+- `devloop review [TASK-ID]`    — review implementation
+- `devloop fix [TASK-ID]`       — launch worker with fix instructions
+- `devloop tasks`               — list all specs
+- `devloop status [TASK-ID]`    — show spec + review
+- `devloop open [TASK-ID]`      — open spec in $EDITOR
+- `devloop block [TASK-ID]`     — print Copilot Instructions Block
+- `devloop clean [--days N]`    — remove old specs
+- `devloop learn [TASK-ID]`     — extract lessons from review and save to CLAUDE.md
+- `devloop agent-sync`          — refresh provider docs cache + analyse with AI (24h TTL)
+- `devloop hooks`               — install Claude pipeline hooks
+- `devloop logs [TYPE]`         — show pipeline/notification/session logs
+- `devloop doctor`              — validate dependencies and configuration
+- `devloop ci`                  — generate GitHub Actions review workflow
+- `devloop check`               — check for DevLoop updates
+- `devloop update`              — self-upgrade devloop
+
+## Agent Provider Context
+_See `.devloop/agent-docs/provider-context.md` for the full provider reference._
+_Run `devloop agent-sync` to refresh docs and check for provider updates._
+
+## Stack
+See devloop.config.sh for project-specific stack details.
+
+## Learned Patterns
+<!-- devloop learn appends dated lessons here -->
+<!-- DEVLOOP:CLAUDE:END -->
+
+### Agent Sync — 2026-05-09 (providers: claude copilot)
+### DevLoop CLI Doc Delta (Claude + Copilot)
+
+**Bottom line:** no clear new flag-level changes are visible in the extracted snippets; the only explicit breaking shift is on the Copilot side.
+
+1. **New CLI features/flags for non-interactive or piped usage**
+- **Copilot CLI docs now emphasize agentic automation surfaces**: *Autonomous task completion*, *Parallel task execution*, *Run the CLI programmatically*, and *Automate with Actions* (from the navigation structure).
+- **No concrete new flags/options** are shown in the extracted content (only page/index metadata and nav trees).
+- **Claude extract** is mostly site shell/JS and does not expose CLI flags or non-interactive options.
+
+2. **Breaking changes in invocation syntax**
+- **Breaking change confirmed:** the **GitHub CLI Copilot extension is retired** and replaced by the **new GitHub Copilot CLI**.
+- Practical impact: workflows using `gh` extension-style Copilot commands should be migrated to standalone Copilot CLI commands.
+
+3. **Best practices for large prompts/spec files**
+- Prefer **file-based/programmatic invocation** over giant inline arguments (more stable quoting/escaping).
+- Use **stdin/heredoc or checked-in spec files** and pass paths/streams, not long shell-escaped strings.
+- Keep reusable guidance in **custom instructions / skills**; keep per-run payloads in versioned task/spec files.
+
+4. **Recommended DevLoop improvements**
+- Add a **provider migration check** that fails fast if legacy `gh` Copilot extension commands are still used.
+- Standardize a **“spec-from-file” execution path** for both providers to avoid prompt truncation/escaping issues.
+- Add a **docs-delta CI job** that watches key provider pages and alerts only on actionable changes (flags, command syntax, deprecations).
+
+
+Changes   +0 -0
+Requests  1 Premium (19s)
+Tokens    ↑ 54.0k • ↓ 698 • 1.5k (cached) • 311 (reasoning)

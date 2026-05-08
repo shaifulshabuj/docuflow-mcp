@@ -67,7 +67,7 @@ Mark "Review" completed.
 
 ## Error handling
 - `devloop: not found` → tell user: `sudo devloop install`
-- `copilot: not found` → tell user: `gh extension install github/gh-copilot`
+- `copilot: not found` → tell user: `npm install -g @github/copilot`
 - No git changes after work → ask user to confirm Copilot finished
 
 ## Mobile push notifications
