@@ -1,7 +1,5 @@
 # Docuflow Changelog
 
-## [Unreleased]
-
 ## [1.3.0] - 2026-05-09
 
 ### Added
@@ -93,34 +91,6 @@
 - `packages/ui/` — Vite + React 18 web interface (6 views: Ask, Wiki, Graph, Health, Sync, Onboard)
 - `packages/api/` — Express HTTP bridge on port 48821 for development
 - All 6 UI views wired to live API with graceful mock fallback when API offline
-
-
-## [Unreleased] — v0.6.0
-
-Web UI + HTTP API bridge. Fill in before running `npm run release`.
-
-### Added
-- **`packages/ui/`** — Vite + React 18 web interface for DocuFlow
-  - 6 views: Ask (AI-powered Q&A with citations), Wiki (live page browser + detail), Graph (dependency visualiser), Health (quality dashboard), Sync (daemon activity monitor), Onboard (new project setup)
-  - All views wired to live API: project name, wiki tree, page content, health score, activity feed; graceful mock fallback when API offline
-  - Project picker in TopBar when multiple DocuFlow projects are detected
-  - Playwright walkthrough test script: `packages/ui/docuflow-playwright-test.mjs`
-- **`packages/api/`** — Express HTTP bridge on port 48821
-  - Endpoints: `/api/ping`, `/api/projects`, `/api/project`, `/api/wiki`, `/api/wiki/:pageId`, `/api/health`, `/api/activity`, `/api/ask`, `/api/search`
-  - Auto-discovers DocuFlow projects in `~/dev`, `~/code`, `~/projects`, `~/work`, `~/src`, `~/Desktop`
-  - Imports MCP tool functions directly from `packages/server/src/tools/` — no subprocess overhead
-  - Parses `.docuflow/log.md` into structured activity feed (supports both heading and pipe-delimited log formats)
-- **Root scripts**: `start-web`, `start-api`, `build:core`, `build:ui`, `build:api`, `prerelease-check`
-- **`docuflow review`** — New git-change review command with deterministic findings and actionable improvements
-  - Supports `--staged` and `--since-commit <ref>` scope selection
-  - `--ai` appends non-fatal Copilot review output when available
-  - `--fail-on-critical` exits with code 1 only when critical findings exist
-- **Release script**: `scripts/release.js` now bumps all four packages (server, cli, ui, api) in one run
-- **Pre-release check**: `scripts/pre-release-check.sh` now validates UI TypeScript, UI production build, and API TypeScript in addition to existing checks
-
-### Changed
-- Root `package.json` `build` script now includes `packages/ui` and `packages/api`
-- Version sync requirement extended to all four packages before release is allowed
 
 
 ## [0.5.6] - 2026-05-07
