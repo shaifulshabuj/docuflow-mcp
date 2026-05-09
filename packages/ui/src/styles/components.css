@@ -364,7 +364,8 @@
 /* Sidebar toggle */
 .df-rail--collapsed { width: 64px !important; }
 .df-rail--collapsed .df-rail__groups,
-.df-rail--collapsed .df-rail__project-picker { display: none; }
+.df-rail--collapsed .df-rail__project-picker,
+.df-rail--collapsed .df-rail__footer { display: none; }
 .df-rail--collapsed .df-rail__item:not(.df-rail__project-picker-wrap):hover .df-rail__tip { display: none; }
 .df-rail--collapsed .df-rail__spacer { display: none; }
 

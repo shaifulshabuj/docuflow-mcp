@@ -217,7 +217,7 @@ export default function Rail({ view, onChange }: RailProps) {
           
           {/* Rescan button */}
           <button
-            className="df-action"
+            className="df-action df-action--compact"
             onClick={() => rescanProjects && rescanProjects()}
             title="Rescan projects"
             style={{ opacity: 0.6 }}
