@@ -9,8 +9,12 @@ interface RailProps {
 
 const RAIL_GROUPS = [
   {
-    label: 'PROJECT',
-    items: ['query', 'wiki', 'graph', 'health', 'sync', 'onboard', 'settings'],
+    label: 'EXPLORE',
+    items: ['query', 'wiki', 'graph'] as const,
+  },
+  {
+    label: 'MANAGE',
+    items: ['health', 'sync', 'onboard', 'settings'] as const,
   },
 ] as const;
 
@@ -59,54 +63,12 @@ export default function Rail({ view, onChange }: RailProps) {
 
   return (
     <div className="df-rail">
-      {/* Actions panel - always visible */}
-      <div className="df-rail__actions">
-        {/* Sync */}
-        <button
-          className={`df-action ${view === 'sync' ? 'df-action--active' : ''}`}
-          onClick={() => onChange('sync')}
-          title="Sync & Ingest"
-        >
-          {ICON_MAP.sync}
-        </button>
-        
-        {/* Health */}
-        <button
-          className={`df-action ${view === 'health' ? 'df-action--active' : ''}`}
-          onClick={() => onChange('health')}
-          title="Health & Lint"
-        >
-          {ICON_MAP.health}
-        </button>
-        
-        {/* Help */}
-        <button
-          className={`df-action ${view === 'onboard' ? 'df-action--active' : ''}`}
-          onClick={() => onChange('onboard')}
-          title="Help & Onboarding"
-        >
-          {ICON_MAP.help}
-        </button>
-        
-        {/* Settings */}
-        <button
-          className={`df-action ${view === 'settings' ? 'df-action--active' : ''}`}
-          onClick={() => onChange('settings')}
-          title="Settings"
-        >
-          {ICON_MAP.settings}
-        </button>
-      </div>
-
-      <div className="df-rail__divider" />
-
       {/* Main nav items */}
-      <div className="df-rail__groups">
+      <div className="df-rail__groups" style={{ overflowY: 'auto', minHeight: 0 }}>
         {RAIL_GROUPS.map((group, gi) => (
           <div key={gi} className="df-rail__group">
             <div className="df-rail__group-label">{group.label}</div>
             {group.items.map(item => {
-              if (['onboard', 'settings'].includes(item)) return null;
               const isActive = view === item;
               
               return (
@@ -123,6 +85,9 @@ export default function Rail({ view, onChange }: RailProps) {
           </div>
         ))}
       </div>
+
+      {/* spacer pushes footer to bottom */}
+      <div className="df-rail__spacer" />
 
       <div className="df-rail__divider" />
 

@@ -198,6 +198,65 @@
 }
 .df-rail__divider { width: 20px; height: 1px; margin: 4px auto 4px; background: var(--df-border-3); }
 
+/* ── Action button (icon-only rail button) ───────────── */
+.df-action {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--df-r-lg);
+  color: var(--df-text-4);
+  cursor: pointer;
+  transition: background var(--df-fast), color var(--df-fast);
+  flex-shrink: 0;
+}
+.df-action:hover {
+  background: var(--df-bg-hover);
+  color: var(--df-text-3);
+}
+.df-action--active {
+  background: var(--df-surface-3);
+  color: var(--df-text);
+}
+.df-action--active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--df-accent);
+}
+.df-action--compact {
+  width: 32px;
+  height: 32px;
+}
+
+/* ── Rail actions container (top icon strip) ─────────── */
+.df-rail__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 0 8px;
+}
+
+/* ── Rail footer ─────────────────────────────────────── */
+.df-rail__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0 8px 4px;
+  gap: 4px;
+}
+
 /* Project picker */
 .df-rail__project-picker { width: 32px; margin-bottom: 4px; }
 .df-rail__project-picker-wrap {
