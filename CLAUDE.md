@@ -305,7 +305,8 @@ This project uses the DevLoop multi-agent pipeline:
 ```bash
 devloop start
 ```
-Then connect from claude.ai/code or the Claude mobile app.
+Then connect from claude.ai/code or the Claude mobile app (when main provider is claude).
+If main provider is copilot, the session runs locally in the terminal.
 
 ## DevLoop commands — Quick (full pipeline in one shot)
 - `devloop run "feature"`       — **full pipeline**: architect → work → review → fix loop → learn
