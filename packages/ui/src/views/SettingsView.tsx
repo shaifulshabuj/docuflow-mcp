@@ -1,7 +1,6 @@
 import { useProject } from '../context/ProjectContext';
 
-// Version will be injected at build time if available, fallback to 'dev'
-const APP_VERSION = typeof '__APP_VERSION__' === 'string' && '__APP_VERSION__' ? '__APP_VERSION__' : 'dev';
+const APP_VERSION: string = __APP_VERSION__;
 
 export default function SettingsView() {
   const { projectPath } = useProject();
@@ -14,7 +13,7 @@ export default function SettingsView() {
       <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div className="df-card">
           <div className="df-eyebrow">API Port</div>
-          <div style={{ fontSize: 24, fontWeight: 600, marginTop: 6 }}>48821</div>
+          <div style={{ fontSize: 24, fontWeight: 600, marginTop: 6 }}>{window.location.port || '80'}</div>
         </div>
         
         <div className="df-card">
