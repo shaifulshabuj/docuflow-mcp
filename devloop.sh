@@ -24,7 +24,8 @@ extract_verdict_from_line() {
   local upper_line token
   upper_line="$(printf '%s' "$line" | tr '[:lower:]' '[:upper:]')"
 
-  if [[ "$upper_line" =~ VERDICT[[:space:]]*:[[:space:]]*([A-Z_[:space:]-]+) ]]; then
+  # Match Verdict: with optional markdown noise (*, _, #, etc.) and spaces
+  if [[ "$upper_line" =~ VERDICT[*_#[:space:]]*:[*_#[:space:]]*([A-Z_[:space:]-]+) ]]; then
     token="${BASH_REMATCH[1]}"
     normalize_verdict_token "$token"
     return 0
@@ -37,8 +38,8 @@ parse_review_verdict() {
   local review_text="${1:-}"
   local first_non_empty_line=""
   local line verdict
-  local canonical_verdict=""
-
+  
+  # Step 1: Extract the first non-empty line
   while IFS= read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
       first_non_empty_line="$line"
@@ -46,24 +47,7 @@ parse_review_verdict() {
     fi
   done <<< "$review_text"
 
-  # First pass: look for any canonical "Verdict: <TOKEN>" line anywhere
-  while IFS= read -r line; do
-    if [[ "$line" =~ ^[[:space:]]*Verdict:[[:space:]]* ]]; then
-      verdict="$(extract_verdict_from_line "$line")"
-      if [ "$verdict" != "UNKNOWN" ]; then
-        canonical_verdict="$verdict"
-        break
-      fi
-    fi
-  done <<< "$review_text"
-
-  # If we found a canonical verdict, use it
-  if [ -n "$canonical_verdict" ]; then
-    printf '%s' "$canonical_verdict"
-    return 0
-  fi
-
-  # Fallback: check first non-empty line for any verdict-like pattern
+  # Step 2: Check if first non-empty line is a valid canonical verdict
   if [[ -n "$first_non_empty_line" ]]; then
     verdict="$(extract_verdict_from_line "$first_non_empty_line")"
     if [ "$verdict" != "UNKNOWN" ]; then
@@ -72,15 +56,18 @@ parse_review_verdict() {
     fi
   fi
 
-  # Last resort: scan all lines for any valid verdict
+  # Step 3: Search for first canonical "Verdict: <TOKEN>" line anywhere (case-insensitive, noise-tolerant)
   while IFS= read -r line; do
-    verdict="$(extract_verdict_from_line "$line")"
-    if [ "$verdict" != "UNKNOWN" ]; then
-      printf '%s' "$verdict"
-      return 0
+    if [[ "$line" =~ [Vv][Ee][Rr][Dd][Ii][Cc][Tt][[:space:]]*:[[:space:]]* ]]; then
+      verdict="$(extract_verdict_from_line "$line")"
+      if [ "$verdict" != "UNKNOWN" ]; then
+        printf '%s' "$verdict"
+        return 0
+      fi
     fi
   done <<< "$review_text"
 
+  # No valid verdict found
   printf 'UNKNOWN'
 }
 

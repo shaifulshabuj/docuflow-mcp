@@ -21,15 +21,13 @@ devloop review TASK-ID
 ```
 
 ### 3. Return to orchestrator
-- First non-empty line MUST be exactly one of:
+- **CRITICAL**: The first non-empty line of your output MUST be exactly one of:
   - `Verdict: APPROVED`
   - `Verdict: NEEDS_WORK`
   - `Verdict: REJECTED`
-- Do not use emoji/markdown variants for that first verdict line.
-- Score: X/10
-- What passed
-- Issues (file, area, severity, description)
-- Copilot Fix Instructions block (if NEEDS_WORK)
+- No emoji, markdown formatting, or other variants on that verdict line.
+- Canonical format (case-insensitive but normalized to uppercase tokens internally).
+- Then: Score X/10, what passed, issues with file/area/severity/description, and Copilot fix instructions if NEEDS_WORK.
 
 ## Criteria (priority order)
 1. Spec compliance

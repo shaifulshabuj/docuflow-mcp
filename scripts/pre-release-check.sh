@@ -172,10 +172,16 @@ for verdict_line in "Verdict: APPROVED" "Verdict: NEEDS_WORK" "Verdict: REJECTED
   fi
 done
 
-if grep -Fq "First non-empty line MUST be exactly one of:" "$REVIEWER_AGENT_FILE"; then
+if grep -Fq "first non-empty line of your output MUST be exactly one of:" "$REVIEWER_AGENT_FILE"; then
   check "reviewer contract enforces canonical first-line verdict format" "pass"
 else
   check "reviewer contract enforces canonical first-line verdict format" "fail"
+fi
+
+if grep -Fq "first non-empty line of your output MUST be exactly one of:" "$REVIEWER_AGENT_FILE"; then
+  check "reviewer contract requires first non-empty canonical verdict" "pass"
+else
+  check "reviewer contract requires first non-empty canonical verdict" "fail"
 fi
 
 # review behavioral checks (required acceptance scenarios)
