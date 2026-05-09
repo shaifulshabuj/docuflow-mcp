@@ -233,10 +233,16 @@ export default function GraphView(): JSX.Element {
     };
   }, []);
 
-  // Bind drag to node circles whenever the node array changes
+  // Bind drag to node circles whenever visible nodes/edges change.
+  // React renders the <g> elements so they have no D3 datum bound; calling
+  // .data(nodes, keyFn) would invoke keyFn on those un-datumed elements
+  // (d === undefined) and crash. Instead, look up each SimNode via the
+  // data-nid attribute set on each <g> in JSX.
   useEffect(() => {
     const gEl = gRef.current;
     if (!gEl) return;
+
+    const nodeMap = new Map(nodesArrRef.current.map((n) => [n.id, n]));
 
     const dragBehavior = drag<SVGGElement, SimNode>()
       .on('start', (event, d) => {
@@ -255,10 +261,13 @@ export default function GraphView(): JSX.Element {
       });
 
     select(gEl)
-      .selectAll<SVGGElement, SimNode>('g.df-graph__node')
-      .data(nodesArrRef.current, (d) => d.id)
-      .call(dragBehavior);
-  }, [tickVersion]);
+      .selectAll<SVGGElement, unknown>('g.df-graph__node')
+      .each(function () {
+        const id = (this as SVGGElement).dataset.nid;
+        const node = id ? nodeMap.get(id) : undefined;
+        if (node) select<SVGGElement, SimNode>(this as SVGGElement).datum(node).call(dragBehavior);
+      });
+  }, [visibleNodes.length, visibleEdges.length]);
 
   // Adjacency for the focused node
   const focusedId = hovered ?? selected;
@@ -451,7 +460,7 @@ export default function GraphView(): JSX.Element {
           </div>
         )}
 
-        <svg ref={svgRef} className="df-graph__svg" width={size.w} height={size.h}>
+        <svg ref={svgRef} className="df-graph__svg" width={size.w} height={size.h} data-tick={tickVersion}>
           <g ref={gRef}>
             {linksArrRef.current.map((l, i) => {
               const s = (l.source as SimNode).id ?? (l.source as unknown as string);
@@ -490,6 +499,7 @@ export default function GraphView(): JSX.Element {
                 <g
                   key={n.id}
                   className="df-graph__node"
+                  data-nid={n.id}
                   transform={`translate(${n.x ?? 0}, ${n.y ?? 0})`}
                   style={{ cursor: 'pointer', opacity, transition: 'opacity .15s' }}
                   onMouseEnter={() => setHovered(n.id)}
