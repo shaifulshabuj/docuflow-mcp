@@ -307,11 +307,19 @@ devloop start
 ```
 Then connect from claude.ai/code or the Claude mobile app.
 
-## DevLoop commands
+## DevLoop commands — Quick (full pipeline in one shot)
+- `devloop run "feature"`       — **full pipeline**: architect → work → review → fix loop → learn
+- `devloop go  "feature"`       — alias for run
+- `devloop queue add "task"`    — add to batch queue
+- `devloop queue run`           — process all queued tasks sequentially
+
+## DevLoop commands — Step-by-step
 - `devloop architect "feature"` — design a spec
 - `devloop work [TASK-ID]`      — launch worker to implement
 - `devloop review [TASK-ID]`    — review implementation
 - `devloop fix [TASK-ID]`       — launch worker with fix instructions
+
+## DevLoop commands — Management
 - `devloop tasks`               — list all specs
 - `devloop status [TASK-ID]`    — show spec + review
 - `devloop open [TASK-ID]`      — open spec in $EDITOR
@@ -323,8 +331,8 @@ Then connect from claude.ai/code or the Claude mobile app.
 - `devloop logs [TYPE]`         — show pipeline/notification/session logs
 - `devloop doctor`              — validate dependencies and configuration
 - `devloop ci`                  — generate GitHub Actions review workflow
-- `devloop check`               — check for DevLoop updates
-- `devloop update`              — self-upgrade devloop
+- `devloop check`               — check for DevLoop updates (works out-of-the-box)
+- `devloop update`              — self-upgrade devloop (pulls from GitHub, refreshes project configs)
 
 ## Agent Provider Context
 _See `.devloop/agent-docs/provider-context.md` for the full provider reference._
@@ -365,3 +373,15 @@ See devloop.config.sh for project-specific stack details.
 Changes   +0 -0
 Requests  1 Premium (19s)
 Tokens    ↑ 54.0k • ↓ 698 • 1.5k (cached) • 311 (reasoning)
+
+### From TASK-20260509-153232 (2026-05-09)
+- When promoting `[Unreleased]` to a versioned block in CHANGELOG.md, the bare `## [Unreleased]` header must be removed entirely — never leave it as an empty header above the new version block.
+- All stale partial `[Unreleased]` sections (e.g. `## [Unreleased] — v0.6.0`) must be deleted at release time, not left as dead entries in the changelog.
+- Both `CHANGELOG.md` and `release/CHANGELOG.md` must receive identical changelog edits simultaneously; they are treated as a mirrored pair by pre-release checks.
+- Fix commits should touch only the files listed in the spec — no collateral edits; the reviewer explicitly validates staged file scope.
+- Commit messages for reviewer-driven fixes must use the `fix(TASK-ID):` prefix (not `feat()`), include the Co-authored-by trailer, and reference the original task ID.
+
+
+Changes   +0 -0
+Requests  1 Premium (19s)
+Tokens    ↑ 84.8k • ↓ 582 • 64.1k (cached)
