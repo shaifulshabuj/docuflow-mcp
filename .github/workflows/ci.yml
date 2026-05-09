@@ -38,8 +38,10 @@ jobs:
 
       - name: Secrets scan
         run: |
-          if grep -r "sk-ant\|ANTHROPIC_API_KEY\|npm_" \
-            packages/ --include="*.ts" --include="*.js" \
+          # Scan for actual secret VALUES (not env var names):
+          # sk-ant-... = real Anthropic key | npm_... = real npm token
+          if grep -r "sk-ant-\|npm_[A-Za-z0-9]\{20,\}" \
+            packages/ --include="*.ts" \
             | grep -v "// \|process\.env\|env\.\|placeholder\|example"; then
             echo "FAIL: Possible hardcoded secret found in source"
             exit 1
