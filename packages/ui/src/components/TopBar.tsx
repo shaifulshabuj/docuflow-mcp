@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Btn } from './UIKit';
 import Icon from './Icon';
 import { useProject } from '../context/ProjectContext';
@@ -57,7 +57,11 @@ export default function TopBar() {
   }
 
   // Close context menu on click outside
-  document.addEventListener('mousedown', () => setShowContext(null));
+  useEffect(() => {
+    function handleMouseDown() { setShowContext(null); }
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, []);
 
   return (
     <div className="df-topbar">

@@ -125,7 +125,7 @@
   flex-shrink: 0;
   flex-wrap: nowrap;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
 }
 .df-topbar > * { flex-shrink: 0; }
