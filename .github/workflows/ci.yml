@@ -119,11 +119,20 @@ jobs:
 
       - name: Bridge detection unit test
         run: |
-          node -e "
+          # detectBridge uses `which` to probe for binaries — create mock stubs
+          # so CI can test the routing logic without real AI tools installed.
+          mkdir -p /tmp/mock-bins
+          for bin in claude copilot codex; do
+            printf '#!/bin/sh\nexit 0\n' > /tmp/mock-bins/$bin
+            chmod +x /tmp/mock-bins/$bin
+          done
+
+          PATH="/tmp/mock-bins:$PATH" node -e "
           const { detectBridge } = require('./packages/cli/dist/commands/watch');
           const tests = [
             [{ useAI: false }, 'none'],
             [{ useAI: true, forceClaude: true }, 'claude'],
+            [{ useAI: true, forceCopilot: true }, 'copilot'],
           ];
           for (const [opts, expected] of tests) {
             const got = detectBridge(opts);
