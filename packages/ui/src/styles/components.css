@@ -366,6 +366,7 @@
 .df-rail--collapsed .df-rail__groups,
 .df-rail--collapsed .df-rail__project-picker { display: none; }
 .df-rail--collapsed .df-rail__item:not(.df-rail__project-picker-wrap):hover .df-rail__tip { display: none; }
+.df-rail--collapsed .df-rail__spacer { display: none; }
 
 /* ── Field ───────────────────────────────────────────── */
 .df-field { display: block; }
