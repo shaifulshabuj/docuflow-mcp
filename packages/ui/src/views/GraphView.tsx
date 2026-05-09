@@ -638,7 +638,15 @@ export default function GraphView(): JSX.Element {
               </>
             ) : (
               <div style={{ color: 'var(--df-text-4)' }}>
-                {loading ? 'Loading graph…' : 'No project selected.'}
+                {loading
+                  ? 'Loading graph…'
+                  : !apiOnline
+                    ? 'API offline.'
+                    : !projectPath
+                      ? 'No project selected.'
+                      : error
+                        ? `Failed to load graph: ${error}`
+                        : 'No wiki pages yet.'}
               </div>
             )}
           </div>
