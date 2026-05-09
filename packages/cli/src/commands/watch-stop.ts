@@ -21,6 +21,7 @@ import {
   removePidFile,
   isProcessAlive,
   WatchPidData,
+  FailoverRecord,
 } from "./watch";
 
 // ─── Colour helpers ─────────────────────────────────────────────────────────
@@ -154,6 +155,34 @@ export async function runStatus(projectPath: string): Promise<void> {
   console.log(`  Uptime:   ${formatUptime(data.started_at)}`);
   console.log(`  Started:  ${new Date(data.started_at).toLocaleString()}`);
   console.log(`  Bridge:   ${bridgeLabel}`);
+
+  // Active bridge — only shown when it differs from startup bridge (failover occurred)
+  const activeBridge = data.active_bridge ?? data.bridge;
+  if (activeBridge !== data.bridge) {
+    const activeBridgeLabel =
+      activeBridge === "none"    ? c.dim("sources-only (no AI)") :
+      activeBridge === "copilot" ? c.green("copilot — direct MCP ⚡") :
+      activeBridge === "claude"  ? c.green("claude  — direct MCP ⚡") :
+      activeBridge === "codex"   ? c.yellow("codex   — doc-gen mode") :
+      activeBridge === "api"     ? c.yellow("api     — doc-gen mode") : activeBridge;
+    console.log(`  Active bridge: ${activeBridgeLabel} ${c.yellow("(failed over)")}`);
+  }
+
+  // Failover stats
+  const failover: FailoverRecord = data.failover ?? { count: 0, last_at: null, from: null, to: null, reason: null };
+  if (failover.count > 0) {
+    const lastAt = failover.last_at
+      ? new Date(failover.last_at).toLocaleTimeString()
+      : "unknown";
+    console.log(`  Failovers:     ${c.yellow(String(failover.count))} total`);
+    console.log(`  Last failover: ${lastAt} — ${failover.from} → ${failover.to}`);
+    if (failover.reason) {
+      console.log(`  Reason:        ${c.dim(failover.reason)}`);
+    }
+  } else {
+    console.log(`  Failovers:     ${c.dim("none")}`);
+  }
+
   console.log(`  Project:  ${data.project_path}`);
 
   if (data.options.lintIntervalHours) {

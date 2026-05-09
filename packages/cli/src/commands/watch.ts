@@ -307,8 +307,14 @@ function buildDocGenPrompt(projectPath: string, changedFiles: string[]): string 
 async function syncWithAI(
   projectPath: string,
   changedFiles: string[],
-  bridge: AIBridge
+  bridge: AIBridge,
+  depth: number = 0
 ): Promise<void> {
+  if (bridge === "none" || depth >= 4) {
+    await directIngestAll(projectPath);
+    return;
+  }
+
   const bridgeLabel = bridge === "copilot" ? "Copilot" : bridge === "claude" ? "Claude" : bridge === "codex" ? "Codex" : "API";
   log("🤖", `${changedFiles.length} file(s) changed — asking ${c.cyan(bridgeLabel)} to update wiki...`);
 
@@ -320,8 +326,10 @@ async function syncWithAI(
       log("✅", c.green(`Copilot updated wiki directly via MCP tools`));
       console.log(c.dim(`     ${result.replace(/\n/g, "\n     ")}`));
     } else {
-      log("⚠️ ", c.yellow("Copilot returned no result — falling back to direct ingest"));
-      await directIngestAll(projectPath);
+      const next = getNextBridge(bridge);
+      await recordFailover(projectPath, bridge, next, "no output");
+      log("⚠️ ", c.yellow(`Copilot failed — falling over to ${next}`));
+      await syncWithAI(projectPath, changedFiles, next, depth + 1);
     }
     return;
   }
@@ -333,8 +341,10 @@ async function syncWithAI(
       log("✅", c.green(`Claude updated wiki directly via MCP tools`));
       console.log(c.dim(`     ${result.replace(/\n/g, "\n     ")}`));
     } else {
-      log("⚠️ ", c.yellow("Claude returned no result — falling back to direct ingest"));
-      await directIngestAll(projectPath);
+      const next = getNextBridge(bridge);
+      await recordFailover(projectPath, bridge, next, "no output");
+      log("⚠️ ", c.yellow(`Claude failed — falling over to ${next}`));
+      await syncWithAI(projectPath, changedFiles, next, depth + 1);
     }
     return;
   }
@@ -350,8 +360,10 @@ async function syncWithAI(
   }
 
   if (!docContent) {
-    log("⚠️ ", c.yellow("AI returned no content — falling back to direct ingest"));
-    await directIngestAll(projectPath);
+    const next = getNextBridge(bridge);
+    await recordFailover(projectPath, bridge, next, "no output");
+    log("⚠️ ", c.yellow(`${bridgeLabel} failed — falling over to ${next}`));
+    await syncWithAI(projectPath, changedFiles, next, depth + 1);
     return;
   }
 
@@ -366,12 +378,23 @@ async function syncWithAI(
   await directIngest(projectPath, autoFilename);
 }
 
-async function scheduledLintWithAI(projectPath: string, bridge: AIBridge): Promise<void> {
+async function scheduledLintWithAI(projectPath: string, bridge: AIBridge, depth: number = 0): Promise<void> {
+  if (bridge === "none" || depth >= 4) {
+    // Lint is best-effort — silent return at terminal level (no directIngestAll)
+    if (bridge === "none" && depth === 0) await directLint(projectPath);
+    return;
+  }
+
   if (bridge === "copilot") {
     log("🔍", `Running scheduled lint via ${c.cyan("Copilot")} (direct MCP call)...`);
     const result = runCopilotCLI(buildCopilotLintPrompt(projectPath));
     if (result) {
       console.log(c.dim(`     ${result.replace(/\n/g, "\n     ")}`));
+    } else {
+      const next = getNextBridge(bridge);
+      await recordFailover(projectPath, bridge, next, "no output during lint");
+      log("⚠️ ", c.yellow(`Copilot lint failed — falling over to ${next}`));
+      await scheduledLintWithAI(projectPath, next, depth + 1);
     }
     return;
   }
@@ -381,6 +404,11 @@ async function scheduledLintWithAI(projectPath: string, bridge: AIBridge): Promi
     const result = runClaudeCLI(buildCopilotLintPrompt(projectPath));
     if (result) {
       console.log(c.dim(`     ${result.replace(/\n/g, "\n     ")}`));
+    } else {
+      const next = getNextBridge(bridge);
+      await recordFailover(projectPath, bridge, next, "no output during lint");
+      log("⚠️ ", c.yellow(`Claude lint failed — falling over to ${next}`));
+      await scheduledLintWithAI(projectPath, next, depth + 1);
     }
     return;
   }
@@ -464,10 +492,19 @@ export interface WatchOptions {
 
 // ─── PID file helpers (shared with watch-stop / watch-status) ────────────────
 
+export interface FailoverRecord {
+  count: number;           // total failovers since daemon started
+  last_at: string | null;  // ISO-8601 timestamp of most recent failover
+  from: AIBridge | null;   // bridge that failed
+  to: AIBridge | null;     // bridge chosen as replacement
+  reason: string | null;   // "no output" or trimmed error message (≤120 chars)
+}
+
 export interface WatchPidData {
   pid: number;
   started_at: string;
-  bridge: AIBridge;
+  bridge: AIBridge;         // originally selected bridge at daemon start
+  active_bridge: AIBridge;  // currently effective bridge (may differ after failovers)
   project_path: string;
   options: {
     ai: boolean;
@@ -477,6 +514,32 @@ export interface WatchPidData {
     lintIntervalHours: number;
     codeExtensions?: string[];
   };
+  failover: FailoverRecord;
+}
+
+export function getNextBridge(current: AIBridge): AIBridge {
+  const chain: AIBridge[] = ["copilot", "claude", "codex", "api", "none"];
+  const idx = chain.indexOf(current);
+  return (idx !== -1 && idx + 1 < chain.length) ? chain[idx + 1] : "none";
+}
+
+export async function recordFailover(
+  projectPath: string,
+  from: AIBridge,
+  to: AIBridge,
+  reason: string
+): Promise<void> {
+  try {
+    const data = await readPidFile(projectPath);
+    if (!data) return;
+    data.failover.count += 1;
+    data.failover.last_at = new Date().toISOString();
+    data.failover.from = from;
+    data.failover.to = to;
+    data.failover.reason = reason.slice(0, 120);
+    data.active_bridge = to;
+    try { await writePidFile(projectPath, data); } catch {}
+  } catch {}
 }
 
 export function getPidFilePath(projectPath: string): string {
@@ -576,6 +639,7 @@ export async function run(options: WatchOptions = {}): Promise<void> {
     pid:         process.pid,
     started_at:  new Date().toISOString(),
     bridge,
+    active_bridge: bridge,
     project_path: projectPath,
     options: {
       ai:               !!options.ai,
@@ -584,6 +648,13 @@ export async function run(options: WatchOptions = {}): Promise<void> {
       forceCodex:       !!options.forceCodex,
       lintIntervalHours: options.lintIntervalHours ?? 24,
       codeExtensions:   options.codeExtensions,
+    },
+    failover: {
+      count: 0,
+      last_at: null,
+      from: null,
+      to: null,
+      reason: null,
     },
   });
   log("💾", `PID ${process.pid} written to ${c.dim(".docuflow/watch.pid")}`);
