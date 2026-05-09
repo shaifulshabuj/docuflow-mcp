@@ -73,7 +73,7 @@ done
 
 echo ""
 echo "Checking compiled dist files..."
-for cmd in init init-interactive status suggest watch watch-stop sync review ui start; do
+for cmd in init init-interactive status suggest watch watch-stop sync review update ui start; do
   f="packages/cli/dist/commands/${cmd}.js"
   [ -f "$f" ] && check "dist: ${cmd}.js compiled" "pass" || check "dist: ${cmd}.js compiled" "fail"
 done
@@ -156,7 +156,7 @@ else
 fi
 
 HELP=$(node packages/cli/dist/index.js 2>&1)
-for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "review --ai" "review --fail-on-critical" "--copilot" "--claude" "ui --port" "Alias for"; do
+for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "review --ai" "review --fail-on-critical" "--copilot" "--claude" "ui --port" "Alias for" "update --check" "update --force"; do
   echo "$HELP" | grep -qe "$cmd" \
     && check "help contains: $cmd" "pass" \
     || check "help contains: $cmd" "fail"

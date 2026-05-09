@@ -98,6 +98,15 @@ if (cmd === '--version' || cmd === '-v') {
     })
   );
 
+// ── update — reinstall latest @doquflow/cli globally ─────────────────────────
+} else if (cmd === 'update' || cmd === 'upgrade') {
+  import('./commands/update').then(m =>
+    m.run({
+      check: hasFlag('--check'),
+      force: hasFlag('--force'),
+    })
+  );
+
 } else {
   console.log(`DocuFlow v${version}`);
   console.log('');
@@ -138,6 +147,10 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  review --ai             Append Copilot AI review to deterministic findings');
   console.log('  review --fail-on-critical Exit 1 if critical findings are detected');
   console.log('  review --quiet          Compact output for CI/scripting');
+  console.log('  update                  Reinstall latest @doquflow/cli globally (refreshes UI + server)');
+  console.log('  update --check          Check whether a newer version is published (no install)');
+  console.log('  update --force          Reinstall even when already on the latest version');
+  console.log('  upgrade                 Alias for "update"');
   console.log('');
   console.log('Options:');
   console.log('  --version, -v                    Print version number');
