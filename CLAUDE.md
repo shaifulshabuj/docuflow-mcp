@@ -418,3 +418,16 @@ Tokens    ↑ 84.8k • ↓ 582 • 64.1k (cached)
 Changes   +0 -0
 Requests  1 Premium (19s)
 Tokens    ↑ 87.0k • ↓ 534 • 65.3k (cached)
+
+### From TASK-20260509-230924 (2026-05-09)
+- When parsing YAML frontmatter without a library, support all three list forms (inline JSON-flow, block-style with indented dashes, scalar) and use `indexOf(":")` to split keys/values so embedded colons in timestamps and URLs survive intact.
+- Compute graph metrics like `in_degree`/`out_degree`/`degree` from the **resolved** edge list (post-dedup, post-collapse), never from raw frontmatter counts — the resolved edges are the authoritative source.
+- For deterministic D3 force-layout positioning, seed initial coordinates via a stable hash (e.g. FNV-1a of sorted node IDs) plus a low-discrepancy sequence (Halton); never rely on `Math.random()` for "same data → same layout" guarantees.
+- Keep React effect dependency arrays minimal and semantic: bind `d3.drag` on `[visibleNodes.length, visibleEdges.length]`, not on per-tick state like `tickVersion`, to avoid rebinding 60×/s during simulation settle.
+- Make schema/type extensions additive-only (e.g. add `outbound_links`, `inbound_links`, `degree` to `WikiPageMetadata` without removing or renaming existing fields) so existing clients keep working without coordinated changes.
+- Register new Express routes (e.g. `/api/graph`) **before** `express.static` and SPA fallback, and load the backing tool via the existing `loadTool(file, exportName)` closure pattern for consistency.
+
+
+Changes   +0 -0
+Requests  15 Premium (17s)
+Tokens    ↑ 59.9k • ↓ 504 • 29.7k (cached)
