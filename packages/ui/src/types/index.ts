@@ -6,7 +6,7 @@ export type IconName =
 
 export type PillTone = 'default' | 'accent' | 'green' | 'amber' | 'red' | 'pink';
 export type BtnVariant = 'default' | 'primary' | 'ghost';
-export type NodeKind = 'module' | 'api' | 'concept' | 'entity';
+export type NodeKind = 'module' | 'api' | 'concept' | 'entity' | 'timeline' | 'synthesis' | 'source';
 
 export interface Project {
   name: string;
@@ -72,6 +72,36 @@ export interface GraphNode {
 export interface GraphData {
   nodes: GraphNode[];
   edges: [string, string][];
+}
+
+export interface GraphApiNode {
+  id: string;
+  title: string;
+  category: 'entity' | 'concept' | 'timeline' | 'synthesis' | 'source';
+  degree: number;
+  in_degree: number;
+  out_degree: number;
+  stale: boolean;
+  updated_at: string;
+}
+
+export interface GraphApiEdge {
+  source: string;
+  target: string;
+  kind: 'outbound' | 'inbound' | 'both';
+}
+
+export interface GraphApiResponse {
+  nodes: GraphApiNode[];
+  edges: GraphApiEdge[];
+  meta: {
+    total_pages: number;
+    total_edges: number;
+    orphans: number;
+    isolated: number;
+    dangling_refs: string[];
+    generated_at: string;
+  };
 }
 
 export interface LintIssue {

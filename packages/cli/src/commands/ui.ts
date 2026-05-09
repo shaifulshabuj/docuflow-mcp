@@ -231,6 +231,7 @@ export async function run(opts: UiOptions = {}): Promise<void> {
   const lintWikiTool   = loadTool('lint-wiki',   'lintWiki');
   const queryWikiTool  = loadTool('query-wiki',  'queryWiki');
   const wikiSearchTool = loadTool('wiki-search', 'wikiSearch');
+  const buildGraphTool = loadTool('build-graph', 'buildGraph');
 
   // ── 3. Express app ──────────────────────────────────────────────────────
   const app = express();
@@ -322,6 +323,16 @@ export async function run(opts: UiOptions = {}): Promise<void> {
       }
     }
     return res.status(404).json({ error: `Page not found: ${pageId}` });
+  });
+
+  app.get('/api/graph', async (req, res) => {
+    const projectPath = req.query.path as string;
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    try {
+      return res.json(await buildGraphTool({ project_path: projectPath }));
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
   });
 
   app.get('/api/health', async (req, res) => {

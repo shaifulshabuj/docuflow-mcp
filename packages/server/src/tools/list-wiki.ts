@@ -28,35 +28,94 @@ interface WikiPageMetadata {
   sources: string[];
   tags: string[];
   stale: boolean;
+  outbound_links: string[];
+  inbound_links: string[];
+  degree: number;
+}
+
+function unquote(s: string): string {
+  const t = s.trim();
+  if (t.length >= 2) {
+    const first = t[0];
+    const last = t[t.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return t.slice(1, -1);
+    }
+  }
+  return t;
 }
 
 /**
- * Parse frontmatter from markdown
+ * Parse YAML-ish frontmatter from markdown.
+ *
+ * Supports:
+ *   - Inline JSON/flow:  key: ["a", "b"]   or   key: {x: 1}
+ *   - Block-style list:  key:\n  - "a"\n  - "b"
+ *   - Scalar:            key: value (values may contain ':' — split on FIRST ':' only)
  */
 function parseFrontmatter(content: string): Record<string, any> {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
 
-  const yaml = match[1];
+  const lines = match[1].split("\n");
   const result: Record<string, any> = {};
 
-  for (const line of yaml.split("\n")) {
-    if (!line.trim()) continue;
-    const [key, ...valueParts] = line.split(":");
-    const value = valueParts.join(":").trim();
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed) { i++; continue; }
 
-    try {
-      if (value.startsWith("[") || value.startsWith("{")) {
-        result[key.trim()] = JSON.parse(value);
-      } else {
-        result[key.trim()] = value;
+    // Block-list continuation handled inside the key branch below; top-level
+    // dashes without a preceding key are ignored.
+    if (trimmed.startsWith("- ")) { i++; continue; }
+
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) { i++; continue; }
+
+    const key = line.slice(0, colonIdx).trim();
+    const rawValue = line.slice(colonIdx + 1).trim();
+
+    if (rawValue === "") {
+      // Possibly a block-style list on subsequent lines: "  - value"
+      const items: string[] = [];
+      let j = i + 1;
+      while (j < lines.length) {
+        const next = lines[j];
+        if (!next.trim()) { j++; continue; }
+        // A block-list item must be indented and start with "- ".
+        const m = next.match(/^(\s+)-\s+(.*)$/);
+        if (!m) break;
+        items.push(unquote(m[2]));
+        j++;
       }
-    } catch {
-      result[key.trim()] = value;
+      if (items.length > 0) {
+        result[key] = items;
+      } else {
+        result[key] = "";
+      }
+      i = j;
+      continue;
     }
+
+    if (rawValue.startsWith("[") || rawValue.startsWith("{")) {
+      try {
+        result[key] = JSON.parse(rawValue);
+      } catch {
+        result[key] = rawValue;
+      }
+    } else {
+      result[key] = unquote(rawValue);
+    }
+    i++;
   }
 
   return result;
+}
+
+function toStringArray(v: any): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string");
 }
 
 /**
@@ -118,6 +177,9 @@ export async function listWiki(input: {
           const updatedMs = new Date(updatedAt).getTime();
           const stale = !isNaN(updatedMs) && (now - updatedMs) > STALE_DAYS * 86_400_000;
 
+          const outbound_links = toStringArray(fm.outbound_links);
+          const inbound_links = toStringArray(fm.inbound_links);
+
           pages.push({
             id: pageId,
             title,
@@ -125,9 +187,12 @@ export async function listWiki(input: {
             path: path.relative(docuDir, filePath),
             created_at: fm.created_at ?? new Date().toISOString(),
             updated_at: updatedAt,
-            sources: fm.sources ?? [],
-            tags: fm.tags ?? [],
+            sources: toStringArray(fm.sources),
+            tags: toStringArray(fm.tags),
             stale,
+            outbound_links,
+            inbound_links,
+            degree: outbound_links.length + inbound_links.length,
           });
 
           categoryCount++;
