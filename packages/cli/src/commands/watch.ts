@@ -413,8 +413,7 @@ async function scheduledLintWithAI(projectPath: string, bridge: AIBridge, depth:
   }
 
   const next = getNextBridge(bridge);
-  await recordFailover(projectPath, bridge, next, "bridge cannot perform lint directly");
-  log("⚠️ ", c.yellow(`${bridge} cannot run lint — falling over to ${next}`));
+  log("ℹ️ ", c.dim(`${bridge} cannot perform MCP lint — escalating to ${next}`));
   await scheduledLintWithAI(projectPath, next, depth + 1);
 }
 
@@ -441,23 +440,6 @@ async function directIngestAll(projectPath: string): Promise<void> {
       await directIngest(projectPath, f);
     }
   } catch {}
-}
-
-async function directLint(projectPath: string): Promise<void> {
-  const { lintWiki } = loadServerTool("lint-wiki");
-  log("🔍", "Running scheduled lint check...");
-  const result = await lintWiki({ project_path: projectPath, check_type: "all" });
-  const score = result.health_score ?? 0;
-  const scoreLabel = score >= 90 ? c.green(`${score}/100`) : score >= 70 ? c.yellow(`${score}/100`) : c.red(`${score}/100`);
-  log("📊", `Health score: ${scoreLabel}`);
-  if (result.issues_found?.length > 0) {
-    const high = result.issues_found.filter((i: any) => i.severity === "high").length;
-    const med  = result.issues_found.filter((i: any) => i.severity === "medium").length;
-    log("⚠️ ", `Issues: 🔴 ${high} high  🟡 ${med} medium`);
-    for (const rec of result.recommendations?.slice(0, 3) ?? []) {
-      console.log(c.dim(`     → ${rec}`));
-    }
-  }
 }
 
 // ─── Debounce helper ─────────────────────────────────────────────────────────
