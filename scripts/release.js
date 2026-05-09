@@ -137,38 +137,41 @@ function getChangelogHeader(version) {
 }
 
 /**
- * Update changelog file with new version entry
+ * Update changelog file: promote [Unreleased] block to versioned entry.
+ * Finds the first `## [Unreleased]` header and replaces it with `## [version] - date`.
+ * Removes any trailing blank placeholder lines (lines containing only "- (Add your changes here)").
+ * If no [Unreleased] block is found, inserts an empty versioned block after the title.
  */
 function updateChangelog(filePath, version) {
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
     const header = getChangelogHeader(version);
     const lines = content.split('\n');
-    let insertIndex = 0;
 
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('#') && !lines[i].startsWith('##')) {
-        insertIndex = i + 1;
-        break;
+    const unreleasedIdx = lines.findIndex(l => /^## \[Unreleased\]/i.test(l));
+    if (unreleasedIdx >= 0) {
+      // Replace [Unreleased] header with versioned header
+      lines[unreleasedIdx] = header;
+      // Strip placeholder bullet lines added by previous releases
+      for (let i = unreleasedIdx + 1; i < lines.length; i++) {
+        if (/^## /.test(lines[i])) break; // next section
+        if (/^- \(Add your changes here\)/.test(lines[i].trim())) {
+          lines.splice(i, 1);
+          i--;
+        }
       }
+    } else {
+      // Fallback: insert blank versioned block after title line
+      let insertIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith('#') && !lines[i].startsWith('##')) {
+          insertIndex = i + 1;
+          break;
+        }
+      }
+      lines.splice(insertIndex, 0, '', header, '');
     }
 
-    const newEntry = [
-      '',
-      header,
-      '',
-      '### Added',
-      '- (Add your changes here)',
-      '',
-      '### Changed',
-      '- (Add your changes here)',
-      '',
-      '### Fixed',
-      '- (Add your changes here)',
-      '',
-    ];
-
-    lines.splice(insertIndex, 0, ...newEntry);
     fs.writeFileSync(filePath, lines.join('\n'));
   } catch (err) {
     exit(`❌ Failed to update changelog ${filePath}: ${err.message}`);
