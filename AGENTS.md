@@ -30,12 +30,14 @@ Rules:
 
 | Server name | Prefix in Copilot | Key tools |
 |-------------|------------------|-----------|
-| `docuflow` | `docuflow__read_module`, etc. | Codebase scanning + wiki Q&A |
-| `waymark-docuflow-mcp` | `waymark-docuflow-mcp__*` | File + shell operations under policy |
+| `docuflow` | `docuflow-read_module`, `docuflow-query_wiki`, etc. | Codebase scanning + wiki Q&A |
+| `waymark-docuflow-mcp` | `waymark-docuflow-mcp-read_file`, etc. | File + shell operations under policy |
+
+> **Note:** Copilot CLI uses dash-separated prefixes (e.g. `docuflow-read_module`); Claude Code uses double-underscore format (`mcp__docuflow__read_module`). Do not mix these formats.
 
 Rules:
 - Copilot reads `.mcp.json` for server config — both servers are now registered
-- Use DocuFlow tools (`docuflow__list_modules`, `docuflow__query_wiki`) for codebase exploration
+- Use DocuFlow tools (`docuflow-list_modules`, `docuflow-query_wiki`) for codebase exploration
 - Waymark tools gate file and shell access; consult `waymark.config.json` for allowed paths/commands
 
 ---
