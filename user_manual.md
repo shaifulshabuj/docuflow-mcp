@@ -1,6 +1,6 @@
 # DocuFlow — User Manual
 
-**Version:** 0.4.1  
+**Version:** 1.3.0  
 **Packages:** `@doquflow/cli` · `@doquflow/server`
 
 ---
@@ -15,7 +15,7 @@
   - [Chapter 5: Workflow D — Maintain & Keep Healthy](#chapter-5-workflow-d--maintain--keep-healthy)
   - [Chapter 6: Workflow E — Dependency & Risk Analysis](#chapter-6-workflow-e--dependency--risk-analysis)
 - [Part 2 — MCP Tool Reference (15 tools)](#part-2--mcp-tool-reference)
-- [Part 3 — CLI Reference (4 commands)](#part-3--cli-reference)
+- [Part 3 — CLI Reference (8 commands)](#part-3--cli-reference)
 - [Appendix — .docuflow/ directory layout](#appendix--docuflow-directory-layout)
 
 ---
@@ -44,7 +44,7 @@ Verify:
 
 ```bash
 docuflow --version
-# 0.4.1
+# 1.3.0
 ```
 
 ---
@@ -1198,6 +1198,85 @@ docuflow suggest
 | General | First source file, overview page, key entities |
 
 **When to use:** After `docuflow init`, or any time you're not sure what to do next in Claude.
+
+---
+
+## `docuflow ui` / `docuflow start`
+
+**What it does:** Start the web interface and API bridge on port 48821.
+
+```bash
+docuflow ui
+# or
+docuflow start
+```
+
+**Flags:**
+- `--port N` — use a custom port instead of 48821
+- `--no-open` — do not auto-open the browser
+
+**What it starts:** A single Express server that serves both the React web UI and the `/api/*` JSON endpoints. Visit `http://localhost:48821` in your browser.
+
+---
+
+## `docuflow review`
+
+**What it does:** Review git changes with deterministic findings and optional Copilot analysis.
+
+```bash
+docuflow review
+docuflow review --staged
+docuflow review --since-commit <ref>
+docuflow review --ai
+docuflow review --fail-on-critical
+```
+
+**Flags:**
+- `--staged` — review only staged changes
+- `--since-commit <ref>` — review changes since a specific commit/tag/branch
+- `--ai` — augment review with Copilot analysis (graceful fallback if unavailable)
+- `--fail-on-critical` — exit with code 1 when critical findings exist
+
+**Detects:** hardcoded secrets, SQL destructive operations, debug statements, TODO markers, type weakening.
+
+---
+
+## `docuflow sync [--ai]`
+
+**What it does:** One-shot wiki sync for CI/CD and git hooks.
+
+```bash
+docuflow sync
+docuflow sync --ai
+docuflow sync --since-commit <ref>
+```
+
+**Flags:**
+- `--ai` — AI-powered sync with optional bridge (copilot › claude › codex › api)
+- `--since-commit <ref>` — only process code changed since a git ref
+- `--no-lint` — skip health check
+- `--fail-on-score N` — exit 1 if health score < N
+- `--quiet` — suppress output for CI logs
+
+---
+
+## `docuflow watch [--ai]`
+
+**What it does:** Continuous daemon that watches sources and code files and auto-updates the wiki.
+
+```bash
+docuflow watch
+docuflow watch --ai
+docuflow watch stop
+docuflow watch status
+docuflow watch restart
+```
+
+**Flags:**
+- `--ai` — enable AI bridge (auto-detects best available)
+- `--copilot`, `--claude`, `--codex` — force a specific AI bridge
+- `--lint-interval N` — run lint every N hours (default: 24)
+- `--code-ext ts,py` — watch only files with these extensions
 
 ---
 

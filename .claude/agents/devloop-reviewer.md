@@ -21,13 +21,11 @@ devloop review TASK-ID
 ```
 
 ### 3. Return to orchestrator
-- **CRITICAL**: The first non-empty line of your output MUST be exactly one of:
-  - `Verdict: APPROVED`
-  - `Verdict: NEEDS_WORK`
-  - `Verdict: REJECTED`
-- No emoji, markdown formatting, or other variants on that verdict line.
-- Canonical format (case-insensitive but normalized to uppercase tokens internally).
-- Then: Score X/10, what passed, issues with file/area/severity/description, and Copilot fix instructions if NEEDS_WORK.
+- Verdict: APPROVED / NEEDS_WORK / REJECTED
+- Score: X/10
+- What passed
+- Issues (file, area, severity, description)
+- Copilot Fix Instructions block (if NEEDS_WORK)
 
 ## Criteria (priority order)
 1. Spec compliance
@@ -44,3 +42,17 @@ devloop review TASK-ID
 
 ## If no git changes
 Tell orchestrator: "No git changes found — ask user to confirm Copilot finished."
+
+## Output contract
+
+The first non-empty line of your output MUST be exactly one of:
+
+Verdict: APPROVED
+Verdict: NEEDS_WORK
+Verdict: REJECTED
+
+Follow the verdict line immediately with:
+- Score: X/10
+- What passed (bullet list)
+- Issues (file · area · severity · description) — omit if APPROVED
+- Copilot Fix Instructions block — required if NEEDS_WORK or REJECTED

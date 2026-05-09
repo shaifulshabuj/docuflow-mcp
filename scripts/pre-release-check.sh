@@ -119,9 +119,9 @@ API_VER=$(node -e "console.log(require('./packages/api/package.json').version)")
   || check "API version matches server (api=$API_VER, srv=$SRV_VER)" "fail"
 
 CLI_DEP=$(node -e "console.log(require('./packages/cli/package.json').dependencies['@doquflow/server'])")
-[ "$CLI_DEP" = "$SRV_VER" ] \
-  && check "CLI dep @doquflow/server pinned to $SRV_VER" "pass" \
-  || check "CLI dep @doquflow/server pinned to $SRV_VER (got $CLI_DEP)" "fail"
+[ "$CLI_DEP" = "^$SRV_VER" ] \
+  && check "CLI dep @doquflow/server pinned to ^$SRV_VER" "pass" \
+  || check "CLI dep @doquflow/server pinned to ^$SRV_VER (got $CLI_DEP)" "fail"
 
 # ── 6. No stale package name ──────────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
 # Docuflow Feature Reference
 
-Complete feature inventory for **Docuflow v0.6.0** — an MCP server with a live web interface that gives AI agents structured access to codebases and persistent LLM Wiki knowledge bases.
+Complete feature inventory for **Docuflow v1.3.0** — an MCP server with a live web interface that gives AI agents structured access to codebases and persistent LLM Wiki knowledge bases.
 
 ---
 
-## Web UI (v0.6.0)
+## Web UI (v1.3.0)
 
 A Vite + React 18 interface for DocuFlow. Launch with `npm run start-api` + `npm run start-web`, then open `http://localhost:5173`.
 
@@ -26,7 +26,7 @@ A Vite + React 18 interface for DocuFlow. Launch with `npm run start-api` + `npm
 
 ---
 
-## HTTP API Bridge (v0.6.0)
+## HTTP API Bridge (v1.3.0)
 
 Express server on port 48821. Imports MCP tool functions directly from `packages/server/src/tools/` — no subprocess overhead, sub-millisecond call latency.
 

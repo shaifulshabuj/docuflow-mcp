@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-09
+
 ### Added
 - **`docuflow review`** — Review current git changes with deterministic findings and optional Copilot analysis
   - Analyzes staged, working tree, or commit range changes
@@ -9,6 +11,9 @@
   - `--ai` augments review with Copilot analysis when available
   - `--fail-on-critical` exits with code 1 when critical findings exist
   - Scopes: `--staged` (staged only), `--since-commit <ref>` (commit range), default (all changes)
+
+### Fixed
+- DevLoop reviewer agent contract now enforces canonical first-line verdict format (`Verdict: APPROVED / NEEDS_WORK / REJECTED`)
 
 ## [1.2.1] - 2026-05-07
 
