@@ -30,12 +30,6 @@ extract_verdict_from_line() {
     return 0
   fi
 
-  if [[ "$upper_line" =~ (^|[^A-Z_])(APPROVED|NEEDS[[:space:]_-]*WORK|REJECTED)($|[^A-Z_]) ]]; then
-    token="${BASH_REMATCH[2]}"
-    normalize_verdict_token "$token"
-    return 0
-  fi
-
   printf 'UNKNOWN'
 }
 
@@ -111,7 +105,6 @@ orchestrator_review_loop() {
   local review_file="${1:-}"
   local max_attempts="${2:-3}"
   local attempt=1
-  local unknown_count=0
   local verdict
 
   if [ -z "$review_file" ] || [ ! -f "$review_file" ]; then
@@ -120,28 +113,40 @@ orchestrator_review_loop() {
   fi
 
   while [ "$attempt" -le "$max_attempts" ]; do
-    verdict="$(cmd_review "$review_file" 2>/dev/null || true)"
-    case "$verdict" in
-      APPROVED)
-        echo "Review approved on attempt $attempt."
-        return 0
-        ;;
-      NEEDS_WORK)
-        echo "Review requires fixes on attempt $attempt."
-        ;;
-      REJECTED)
-        echo "Review rejected on attempt $attempt."
-        return 1
-        ;;
-      *)
-        unknown_count=$((unknown_count + 1))
-        print_unknown_verdict_diagnostics "$review_file" >&2
-        if [ "$unknown_count" -ge 2 ]; then
-          echo "Repeated UNKNOWN verdict; aborting loop to avoid unsafe retries." >&2
+    if verdict="$(cmd_review "$review_file")"; then
+      case "$verdict" in
+        APPROVED)
+          echo "Review approved on attempt $attempt."
+          return 0
+          ;;
+        NEEDS_WORK)
+          echo "Review requires fixes on attempt $attempt."
+          ;;
+        REJECTED)
+          echo "Review rejected on attempt $attempt."
+          return 1
+          ;;
+        UNKNOWN)
+          print_unknown_verdict_diagnostics "$review_file" >&2
           return 2
-        fi
-        ;;
-    esac
+          ;;
+        *)
+          echo "Unexpected review verdict: $verdict" >&2
+          return 2
+          ;;
+      esac
+    else
+      local review_status=$?
+      case "$review_status" in
+        2)
+          return 2
+          ;;
+        *)
+          echo "Unexpected review command failure." >&2
+          return 2
+          ;;
+      esac
+    fi
     attempt=$((attempt + 1))
   done
 
