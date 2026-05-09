@@ -229,6 +229,14 @@ After every development session, append a new entry to the Learning Log below. T
 
 <!-- Newest entry first -->
 
+### 2026-05-09 | Session: Graph view black screen (D3 + React datum crash)
+- **Root cause**: `d3.drag()` calls `.data(nodes, keyFn)` → key function receives existing React-rendered `<g>` elements that have no D3 datum bound → `d === undefined` → `d.id` throws → entire SVG goes black
+- **Fix**: Use `.each(function() { ... })` pattern: read `this.dataset.nid` (from `data-nid={n.id}` on the JSX `<g>`), look up the SimNode in a Map, then call `.datum(node).call(dragBehavior)` per-element
+- **Rule**: Never use `.data(arr, keyFn)` on React-managed DOM nodes. React owns the DOM; D3 has no datum bound. Always use `.each()` + HTML data attributes to bridge React identity to D3
+- **tickVersion**: Still needed to trigger React re-renders so node positions repaint. Wire to `data-tick={tickVersion}` on `<svg>` to satisfy `noUnusedLocals: true` and document the render-trigger intent
+- **Drag effect deps**: `[visibleNodes.length, visibleEdges.length]` — only rebind when topology changes, not on every tick (avoids redundant rebinding 60×/s during simulation)
+- **Playwright on macOS**: Playwright MCP browser can't reach localhost services in this environment — verify fixes by TypeScript check + pre-release check instead
+
 ### 2026-05-09 | Session: DevLoop verdict parsing hardening
 - The runtime DevLoop command implementation may live outside this repo, so in-repo reviewer contract docs and pre-release smoke checks are the reliable enforcement points.
 - Canonical first-line verdict (`Verdict: APPROVED|NEEDS_WORK|REJECTED`) plus tolerant parser normalization is the safest combination for deterministic machine branching.
