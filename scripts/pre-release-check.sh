@@ -162,6 +162,105 @@ for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "review --ai"
     || check "help contains: $cmd" "fail"
 done
 
+# review behavioral checks (required acceptance scenarios)
+echo ""
+echo "Running review behavioral checks..."
+REVIEW_TMP_DIR=$(mktemp -d)
+REPO_ROOT=$(pwd)
+cleanup_review_tmp() {
+  rm -rf "$REVIEW_TMP_DIR"
+}
+trap cleanup_review_tmp EXIT
+
+cd "$REVIEW_TMP_DIR"
+git init -q
+git config user.email "pre-release@example.com"
+git config user.name "Pre Release Check"
+
+printf "base\n" > base.txt
+git add base.txt
+git commit -q -m "base"
+BASE_REF=$(git rev-parse HEAD)
+
+set +e
+EMPTY_OUT=$(node "$REPO_ROOT/packages/cli/dist/index.js" review --quiet 2>&1)
+EMPTY_STATUS=$?
+set -e
+if [ "$EMPTY_STATUS" -eq 0 ] && echo "$EMPTY_OUT" | grep -qi "nothing to review"; then
+  check "review empty diff exits 0" "pass"
+else
+  check "review empty diff exits 0" "fail"
+fi
+
+set +e
+BAD_REF_OUT=$(node "$REPO_ROOT/packages/cli/dist/index.js" review --since-commit DOES_NOT_EXIST --quiet 2>&1)
+BAD_REF_STATUS=$?
+set -e
+if [ "$BAD_REF_STATUS" -eq 2 ]; then
+  check "review invalid --since-commit exits 2" "pass"
+else
+  check "review invalid --since-commit exits 2" "fail"
+fi
+
+printf "staged\n" > staged-only.txt
+git add staged-only.txt
+printf "unstaged\n" > unstaged-only.txt
+
+set +e
+STAGED_SCOPE_OUT=$(node "$REPO_ROOT/packages/cli/dist/index.js" review --staged --quiet 2>&1)
+STAGED_SCOPE_STATUS=$?
+set -e
+if [ "$STAGED_SCOPE_STATUS" -eq 0 ] \
+  && echo "$STAGED_SCOPE_OUT" | grep -q "staged-only.txt" \
+  && ! echo "$STAGED_SCOPE_OUT" | grep -q "unstaged-only.txt"; then
+  check "review --staged scopes to staged files only" "pass"
+else
+  check "review --staged scopes to staged files only" "fail"
+fi
+
+git commit -q -m "add staged-only"
+printf "since\n" > since-only.txt
+git add since-only.txt
+git commit -q -m "add since-only"
+printf "working\n" > working-only.txt
+
+set +e
+SINCE_SCOPE_OUT=$(node "$REPO_ROOT/packages/cli/dist/index.js" review --since-commit "$BASE_REF" --quiet 2>&1)
+SINCE_SCOPE_STATUS=$?
+set -e
+if [ "$SINCE_SCOPE_STATUS" -eq 0 ] \
+  && echo "$SINCE_SCOPE_OUT" | grep -q "since-only.txt" \
+  && ! echo "$SINCE_SCOPE_OUT" | grep -q "working-only.txt"; then
+  check "review --since-commit scopes to commit range only" "pass"
+else
+  check "review --since-commit scopes to commit range only" "fail"
+fi
+
+printf "const token = \"abcd1234\";\n" > critical.ts
+git add critical.ts
+
+set +e
+node "$REPO_ROOT/packages/cli/dist/index.js" review --staged --fail-on-critical --quiet >/dev/null 2>&1
+FAIL_CRITICAL_STATUS=$?
+set -e
+if [ "$FAIL_CRITICAL_STATUS" -eq 1 ]; then
+  check "review --fail-on-critical exits 1 on critical findings" "pass"
+else
+  check "review --fail-on-critical exits 1 on critical findings" "fail"
+fi
+
+cd "$REPO_ROOT"
+
+set +e
+AI_OUT=$(node "$REPO_ROOT/packages/cli/dist/index.js" review --ai --quiet 2>&1)
+AI_STATUS=$?
+set -e
+if [ "$AI_STATUS" -eq 0 ] && (echo "$AI_OUT" | grep -qi "copilot\|unavailable\|review" || echo "$AI_OUT" | grep -q "Summary"); then
+  check "review --ai mode works or falls back gracefully" "pass"
+else
+  check "review --ai mode works or falls back gracefully" "fail"
+fi
+
 # ── 8. Tool count in server ───────────────────────────────────────────────────
 
 echo ""

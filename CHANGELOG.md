@@ -1,5 +1,15 @@
 # Docuflow Changelog
 
+## [Unreleased]
+
+### Added
+- **`docuflow review`** — Review current git changes with deterministic findings and optional Copilot analysis
+  - Analyzes staged, working tree, or commit range changes
+  - Detects: hardcoded secrets, SQL destructive ops, debug statements, TODO markers, type weakening
+  - `--ai` augments review with Copilot analysis when available
+  - `--fail-on-critical` exits with code 1 when critical findings exist
+  - Scopes: `--staged` (staged only), `--since-commit <ref>` (commit range), default (all changes)
+
 ## [1.2.1] - 2026-05-07
 
 ### Added

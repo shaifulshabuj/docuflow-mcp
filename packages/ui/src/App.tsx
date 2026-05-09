@@ -8,6 +8,7 @@ import GraphView from './views/GraphView';
 import HealthView from './views/HealthView';
 import SyncView from './views/SyncView';
 import OnboardView from './views/OnboardView';
+import SettingsView from './views/SettingsView';
 
 export default function App() {
   const [view, setView] = useState('query');
@@ -24,7 +25,7 @@ export default function App() {
             {view === 'health'  && <HealthView />}
             {view === 'sync'    && <SyncView />}
             {view === 'onboard' && <OnboardView />}
-          </div>
+            {view === 'settings' && <SettingsView />}          </div>
         </div>
       </div>
     </ProjectProvider>

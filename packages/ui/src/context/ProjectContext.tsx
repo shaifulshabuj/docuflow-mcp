@@ -25,8 +25,13 @@ interface ProjectContextValue {
   projectInfo: ProjectInfo;
   projects: ProjectInfo[];
   apiOnline: boolean;
+  isLoading: boolean;
   /** Add a project by its absolute path. Returns { ok: true } on success or { ok: false, error } if not found. */
   addProjectByPath: (absPath: string) => Promise<AddResult>;
+  /** Remove a project from the list. Only works for manually added paths. */
+  removeProject: (absPath: string) => void;
+  /** Re-fetch projects from the server and update the list. */
+  rescanProjects: () => Promise<void>;
 }
 
 const fallbackProject: ProjectInfo = {
@@ -67,7 +72,10 @@ const ProjectContext = createContext<ProjectContextValue>({
   projectInfo: fallbackProject,
   projects: [],
   apiOnline: false,
+  isLoading: false,
   addProjectByPath: async () => ({ ok: false, error: 'not ready' }),
+  removeProject: () => {},
+  rescanProjects: async () => {},
 });
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
@@ -75,6 +83,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projectInfo, setProjectInfo] = useState<ProjectInfo>(fallbackProject);
   const [projects, setProjects]       = useState<ProjectInfo[]>([]);
   const [apiOnline, setApiOnline]     = useState(false);
+  const [isLoading, setIsLoading]      = useState(false);
 
   // Track which paths were auto-discovered so we know which are custom
   const autoDiscovered = useRef<Set<string>>(new Set());
@@ -96,11 +105,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
         for (const cp of customPaths) {
           if (autoDiscovered.current.has(cp)) continue; // already in list
+          // If it's not auto-discovered, try to resolve it.
+          // We assume if it exists on the server as a child or direct match.
+          // For simplicity in boot, we just store the path and hope for the best, 
+          // or rely on the server to resolve it later. But here, let's just save it.
+          // Actually, we should attempt to fetch it to validate.
           try {
             const res = await apiFetch<ProjectInfo[]>(
               `/api/projects?path=${encodeURIComponent(cp)}`
             );
-            res.forEach(p => customResults.push(p));
+            if (res.length > 0) {
+              autoDiscovered.current.add(cp); // treat as discovered if server confirms
+              customResults.push(...res);
+            }
           } catch { /* path no longer valid — skip */ }
         }
 
@@ -171,9 +188,41 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /** Helper: remove a project by path (only if it was manually added) */
+  function removeProject(absPath: string): void {
+    setProjects(prev => {
+      const next = prev.filter(p => p.path !== absPath);
+      const custom = next.filter(p => !autoDiscovered.current.has(p.path)).map(p => p.path);
+      saveCustomPaths(custom);
+      return next;
+    });
+  }
+
+  /** Helper: re-fetch projects from server */
+  async function rescanProjects(): Promise<void> {
+    if (!apiOnline) return;
+    setIsLoading(true);
+    try {
+      const res = await apiFetch<ProjectInfo[]>('/api/projects');
+      // Merge with custom paths
+      const customPaths = loadCustomPaths();
+      const customResults: ProjectInfo[] = [];
+      for (const cp of customPaths) {
+        if (res.some(p => p.path === cp)) continue;
+        customResults.push({ ...res[0], path: cp });
+      }
+      const all = [...res, ...customResults];
+      setProjects(all);
+    } catch {
+      // Ignore scan errors — keep existing projects
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <ProjectContext.Provider
-      value={{ projectPath, setProjectPath, projectInfo, projects, apiOnline, addProjectByPath }}
+      value={{ projectPath, setProjectPath, projectInfo, projects, apiOnline, isLoading, addProjectByPath, removeProject, rescanProjects }}
     >
       {children}
     </ProjectContext.Provider>

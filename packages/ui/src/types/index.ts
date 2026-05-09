@@ -2,7 +2,7 @@ export type IconName =
   | 'search' | 'sparkle' | 'book' | 'graph' | 'health' | 'sync' | 'plus'
   | 'settings' | 'arrow-right' | 'check' | 'check-circle' | 'alert' | 'dot'
   | 'chevron-right' | 'chevron-down' | 'file' | 'folder' | 'code' | 'flask'
-  | 'briefcase' | 'cite' | 'tool' | 'commit' | 'play' | 'pause' | 'logo';
+  | 'briefcase' | 'cite' | 'tool' | 'commit' | 'play' | 'pause' | 'logo' | 'help' | 'rescan';
 
 export type PillTone = 'default' | 'accent' | 'green' | 'amber' | 'red' | 'pink';
 export type BtnVariant = 'default' | 'primary' | 'ghost';

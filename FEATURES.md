@@ -89,7 +89,7 @@ npm run start-web    # Vite dev server on http://localhost:5173
 
 ---
 
-## CLI Commands (7 total)
+## CLI Commands (8 total)
 
 | Command | Description |
 |---------|-------------|
@@ -100,6 +100,7 @@ npm run start-web    # Vite dev server on http://localhost:5173
 | `docuflow watch [stop\|status\|restart]` | Background auto-sync daemon. Watches `.docuflow/sources/` for new files (ingests in <1s) and project code files (debounced AI doc generation). Lifecycle: `watch stop`, `watch status`, `watch restart`. |
 | `docuflow sync [--ai] [--source file] [--no-lint] [--quiet]` | One-shot sync for CI/CD and git hooks. Re-ingests all sources, rebuilds index, runs health check. `--ai` uses the best available AI bridge (Copilot → Claude Code → Codex). |
 | `docuflow review [--staged] [--since-commit REF] [--ai] [--fail-on-critical]` | Reviews current git changes and prints deterministic findings (`critical`, `warnings`, `improvements`). `--ai` appends Copilot review output; `--fail-on-critical` exits with code 1 when critical issues exist. |
+| `docuflow ui` / `docuflow start` | Starts an all-in-one Express server (port 48821) with React web UI + HTTP API bridge. Auto-discovers DocuFlow projects in common dev directories. Opens browser automatically (suppress with `--no-open`). Custom port via `--port`. |
 
 ---
 

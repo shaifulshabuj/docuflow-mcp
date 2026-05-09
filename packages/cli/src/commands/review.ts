@@ -42,6 +42,19 @@ function runGit(projectPath: string, args: string[]): string {
   return (result.stdout ?? "").trim();
 }
 
+function runGitAllowStatuses(projectPath: string, args: string[], allowedStatuses: number[]): string {
+  const result = spawnSync("git", args, { cwd: projectPath, encoding: "utf8" });
+  if (result.status === null || !allowedStatuses.includes(result.status)) {
+    const stderr = (result.stderr ?? "").trim();
+    const badRef = /bad revision|unknown revision|ambiguous argument/i.test(stderr);
+    if (badRef) {
+      throw new Error(`Invalid git ref: ${args.join(" ")}`);
+    }
+    throw new Error(stderr || `git ${args.join(" ")} failed`);
+  }
+  return (result.stdout ?? "").trim();
+}
+
 function ensureGitRepo(projectPath: string): void {
   try {
     const out = runGit(projectPath, ["rev-parse", "--is-inside-work-tree"]);
@@ -100,6 +113,20 @@ export function getDiffText(projectPath: string, staged: boolean, sinceCommit?: 
   if (staged) {
     return capDiff(runGit(projectPath, ["diff", "--cached"]));
   }
+
+  const untracked = runGit(projectPath, ["ls-files", "--others", "--exclude-standard"])
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const untrackedPatches: string[] = [];
+  for (const file of untracked) {
+    const patch = runGitAllowStatuses(projectPath, ["diff", "--no-index", "--", "/dev/null", file], [0, 1]);
+    if (patch) {
+      untrackedPatches.push(patch);
+    }
+  }
+
   const stagedDiff = runGit(projectPath, ["diff", "--cached"]);
   const workingDiff = runGit(projectPath, ["diff"]);
   const joined = [
@@ -108,6 +135,9 @@ export function getDiffText(projectPath: string, staged: boolean, sinceCommit?: 
     "",
     "=== WORKING TREE DIFF ===",
     workingDiff,
+    "",
+    "=== UNTRACKED FILE DIFF ===",
+    untrackedPatches.join("\n"),
   ].join("\n");
   return capDiff(joined);
 }
@@ -234,7 +264,13 @@ function buildCopilotPrompt(projectPath: string, changedFiles: string[], diffTex
 export function runCopilotReview(prompt: string): string | null {
   const result = spawnSync(
     "copilot",
-    ["--prompt", prompt, "--allow-all-tools", "--allow-all-paths", "--no-ask-user", "--output-format", "json"],
+    [
+      "--prompt", prompt,
+      "--allow-all-tools",
+      "--allow-all-paths",
+      "--no-ask-user",
+      "--output-format", "json"
+    ],
     { encoding: "utf8", timeout: 180_000 }
   );
   if (result.error || result.status !== 0) return null;
@@ -327,7 +363,7 @@ export async function run(options: ReviewOptions = {}): Promise<void> {
       console.log(`\n${aiLabel}`);
       console.log(aiResult);
     } else {
-      console.log(`\n${quiet ? "AI warning:" : c.yellow("AI warning:")} Copilot CLI unavailable or failed; deterministic review kept.`);
+      deterministic.improvements.push("Copilot AI review unavailable; using deterministic review only");
     }
   }
 

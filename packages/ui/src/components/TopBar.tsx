@@ -5,12 +5,14 @@ import { useProject } from '../context/ProjectContext';
 import { DOCUFLOW_DATA as D } from '../data/mock';
 
 export default function TopBar() {
-  const { projectInfo, projects, setProjectPath, apiOnline, addProjectByPath } = useProject();
+  const { projectInfo, projects, setProjectPath, apiOnline, addProjectByPath, rescanProjects, removeProject } = useProject();
   const [showPicker, setShowPicker]   = useState(false);
   const [addPath, setAddPath]         = useState('');
   const [addStatus, setAddStatus]     = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
   const [addError, setAddError]       = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [showContext, setShowContext] = useState<null | { x: number; y: number; path: string }>(null);
 
   const name       = projectInfo.name       || D.project.name;
   const syncStatus = projectInfo.syncStatus || D.project.syncStatus;
@@ -18,6 +20,7 @@ export default function TopBar() {
 
   function openPicker() {
     setShowPicker(p => !p);
+    setShowContext(null);
     setAddPath('');
     setAddStatus('idle');
     setAddError('');
@@ -34,6 +37,7 @@ export default function TopBar() {
       setAddPath('');
       setTimeout(() => {
         setShowPicker(false);
+        setShowContext(null);
         setAddStatus('idle');
       }, 800);
     } else {
@@ -41,6 +45,19 @@ export default function TopBar() {
       setAddError(result.error ?? 'Unknown error');
     }
   }
+
+  function handleRemove(path: string) {
+    removeProject(path);
+    setShowContext(null);
+  }
+
+  function handleContextMenu(ev: React.MouseEvent, path: string) {
+    ev.preventDefault();
+    setShowContext({ x: ev.clientX, y: ev.clientY, path });
+  }
+
+  // Close context menu on click outside
+  document.addEventListener('mousedown', () => setShowContext(null));
 
   return (
     <div className="df-topbar">
@@ -76,7 +93,8 @@ export default function TopBar() {
                     ? 'var(--df-accent-text)' : 'var(--df-text)',
                   fontFamily: 'inherit', fontSize: 12, cursor: 'pointer',
                 }}
-                onClick={() => { setProjectPath(p.path); setShowPicker(false); }}
+                onClick={() => { setProjectPath(p.path); setShowPicker(false); setShowContext(null); }}
+                onContextMenu={(ev) => handleContextMenu(ev, p.path)}
               >
                 {p.name}
                 <span style={{ marginLeft: 8, color: 'var(--df-text-4)', fontSize: 10 }}>
@@ -95,7 +113,7 @@ export default function TopBar() {
               </div>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <input
-                  ref={inputRef}
+                  ref={inputRef as any}
                   value={addPath}
                   onChange={e => { setAddPath(e.target.value); setAddStatus('idle'); }}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddPath(); }}
@@ -137,6 +155,24 @@ export default function TopBar() {
             </div>
           </div>
         )}
+
+        {/* Right-click context menu */}
+        {showContext && (
+          <div style={{
+            position: 'fixed', top: showContext.y + 4, left: showContext.x + 4,
+            background: 'var(--df-surface)', border: '1px solid var(--df-border-2)',
+            borderRadius: 'var(--df-r-sm)', padding: '2px 0', minWidth: 140,
+            zIndex: 200, boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+          }}>
+            <button style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '6px 12px', background: 'none', border: 'none',
+              color: 'var(--df-red, #f44336)', fontFamily: 'inherit', fontSize: 12
+            }} onClick={() => handleRemove(showContext.path)}>
+              • Remove
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="df-topbar__divider" />
@@ -153,6 +189,7 @@ export default function TopBar() {
       <div style={{ flex: 1 }} />
       <Btn icon="search" kbd="⌘K">Search</Btn>
       <Btn icon="tool">Tools</Btn>
+      <Btn icon="sync" onClick={() => rescanProjects?.()}>Rescan</Btn>
       <div className="df-topbar__avatar" />
     </div>
   );
