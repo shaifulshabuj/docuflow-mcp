@@ -412,8 +412,10 @@ async function scheduledLintWithAI(projectPath: string, bridge: AIBridge, depth:
     return;
   }
 
-  // Fallback: call lint tool directly
-  await directLint(projectPath);
+  const next = getNextBridge(bridge);
+  await recordFailover(projectPath, bridge, next, "bridge cannot perform lint directly");
+  log("⚠️ ", c.yellow(`${bridge} cannot run lint — falling over to ${next}`));
+  await scheduledLintWithAI(projectPath, next, depth + 1);
 }
 
 // ─── Direct tool calls (no AI) ───────────────────────────────────────────────
