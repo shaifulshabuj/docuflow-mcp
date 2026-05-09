@@ -386,3 +386,15 @@ Tokens    ↑ 54.0k • ↓ 698 • 1.5k (cached) • 311 (reasoning)
 Changes   +0 -0
 Requests  1 Premium (19s)
 Tokens    ↑ 84.8k • ↓ 582 • 64.1k (cached)
+
+### From TASK-20260509-154241 (2026-05-09)
+- Always run `bash scripts/pre-release-check.sh` and confirm `RESULT: PASSED` before every commit, even when only non-source files (changelogs, docs, gitignored artifacts) are changed — the spec treats it as a mandatory gate, not optional.
+- When editing `CHANGELOG.md`, apply identical edits to `release/CHANGELOG.md` in the same commit; the pre-release suite enforces that both files mirror each other exactly.
+- Scope commit diffs strictly to files listed in the spec — a clean 2-file diff is a positive signal; any extra file in the diff is a red flag for contamination.
+- Deletion tasks are scoped exactly by the spec's enumerated list — do not delete files the spec doesn't mention (e.g., residual `.pre-commit` files not in the list), and do not leave files the spec does mention.
+- Use the `chore:` commit prefix (not `feat:` or `fix:`) for housekeeping tasks like changelog updates, spec cleanup, and artifact deletion; always include the `Co-authored-by` trailer verbatim.
+
+
+Changes   +0 -0
+Requests  1 Premium (19s)
+Tokens    ↑ 87.0k • ↓ 534 • 65.3k (cached)
