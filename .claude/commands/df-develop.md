@@ -229,6 +229,11 @@ After every development session, append a new entry to the Learning Log below. T
 
 <!-- Newest entry first -->
 
+### 2026-05-09 | Session: DevLoop verdict parsing hardening
+- The runtime DevLoop command implementation may live outside this repo, so in-repo reviewer contract docs and pre-release smoke checks are the reliable enforcement points.
+- Canonical first-line verdict (`Verdict: APPROVED|NEEDS_WORK|REJECTED`) plus tolerant parser normalization is the safest combination for deterministic machine branching.
+- Pre-release check drift guards should assert both canonical verdict examples and explicit first-line contract language to catch prompt regressions early.
+
 ### 2026-05-07 | Session: `docuflow ui` / `docuflow start` packaging
 - `loadTool()` pattern cleanly bridges CLI → server tools without TypeScript deep-import issues
 - `express.static` + `app.get('*')` SPA fallback MUST come after all `/api/*` routes

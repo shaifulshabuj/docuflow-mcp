@@ -394,6 +394,26 @@ See full documentation in:
 
 ---
 
+## Verdict parsing contract
+
+DevLoop review consumers should output a canonical first non-empty line:
+
+```text
+Verdict: APPROVED
+Verdict: NEEDS_WORK
+Verdict: REJECTED
+```
+
+Parser behavior:
+- If the first non-empty line is a verdict line, that line is authoritative.
+- Canonical `Verdict: <TOKEN>` lines are prioritized over later conflicting verdict-like text.
+- Tolerated variants such as markdown/noise/case differences (for example `### **Verdict:** needs_work` or `Verdict: REJECTED ❌`) normalize to canonical tokens.
+- Unknown or malformed values (for example `Verdict: MAYBE`) resolve to `UNKNOWN` and are not coerced.
+
+If parsing returns `UNKNOWN`, re-run the reviewer and ensure the first non-empty output line is exactly one of the three canonical forms above.
+
+---
+
 ## Development
 
 ```bash
