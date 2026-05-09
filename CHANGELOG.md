@@ -1,5 +1,17 @@
 # Docuflow Changelog
 
+## [1.3.1] - 2026-05-09
+
+### Added
+- (Add your changes here)
+
+### Changed
+- (Add your changes here)
+
+### Fixed
+- (Add your changes here)
+
+
 ## [Unreleased]
 
 ### Fixed
