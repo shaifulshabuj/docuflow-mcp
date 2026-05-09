@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "docuflow": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/server/dist/index.js"]
+    },
+    "waymark-docuflow-mcp": {
+      "type": "stdio",
+      "command": "/Users/shabuj/.nvm/versions/node/v20.20.0/bin/node",
+      "args": [
+        "/Users/shabuj/.nvm/versions/node/v20.20.0/lib/node_modules/@way_marks/cli/node_modules/@way_marks/server/dist/mcp/server.js",
+        "--project-root",
+        "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp",
+        "--db-path",
+        "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.waymark/waymark.db"
+      ],
+      "cwd": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp"
+    }
+  }
+}

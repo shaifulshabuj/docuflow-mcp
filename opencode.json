@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "docuflow": {
+      "command": "node",
+      "args": ["packages/server/dist/index.js"],
+      "type": "local"
+    },
+    "waymark": {
+      "command": "node",
+      "args": [
+        ".waymark/server.js",
+        "--project-root", ".",
+        "--db-path", ".waymark/waymark.db"
+      ],
+      "type": "local"
+    }
+  }
+}

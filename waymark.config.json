@@ -2,7 +2,9 @@
   "version": "2",
   "platforms": [
     "claude",
-    "copilot-cli"
+    "copilot-cli",
+    "opencode",
+    "pi"
   ],
   "policies": {
     "allowedPaths": [

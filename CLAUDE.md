@@ -45,6 +45,23 @@ See devloop.config.sh for project-specific stack details.
 DocuFlow is an MCP server that gives you structured access to this codebase and maintains a living wiki.
 It is registered in your Claude Desktop config and available as MCP tools in every session.
 
+## MCP Registration
+
+DocuFlow is registered in **two places**:
+1. **`.mcp.json`** (project-level) — auto-loaded by Claude Code CLI; use tools as `mcp__docuflow__<tool>`
+2. **Claude Desktop global config** — registered under the server name from `docuflow init`; use bare tool names
+
+In Claude Code CLI sessions, always call DocuFlow tools with the `mcp__docuflow__` prefix:
+- `mcp__docuflow__read_module` — analyse a source file
+- `mcp__docuflow__list_modules` — scan all files in a directory
+- `mcp__docuflow__query_wiki` — Q&A against the wiki
+- `mcp__docuflow__write_spec` — persist a spec
+
+Waymark is registered as `waymark-docuflow-mcp` in `.mcp.json`. Use:
+- `mcp__waymark-docuflow-mcp__read_file` — read any file (policy-enforced)
+- `mcp__waymark-docuflow-mcp__write_file` — write/edit any file (policy-enforced)
+- `mcp__waymark-docuflow-mcp__bash` — run shell commands (policy-enforced)
+
 ## Codebase Scanner Tools
 
 - **read_module** — Analyse a single source file. Returns language, classes, functions, dependencies, DB tables, endpoints, config refs, and raw content (first 8 KB).
@@ -253,6 +270,7 @@ operations with Waymark MCP equivalents:
 | Write or edit a file   | write_file            | mcp__waymark-docuflow-mcp__write_file |
 | Read a file            | read_file             | mcp__waymark-docuflow-mcp__read_file  |
 | Run shell commands     | bash / run_command    | mcp__waymark-docuflow-mcp__bash       |
+| Scan codebase / wiki   | (none — use directly) | mcp__docuflow__list_modules / mcp__docuflow__query_wiki |
 
 This applies to ALL tasks in this project —
 refactoring, creating files, running tests,

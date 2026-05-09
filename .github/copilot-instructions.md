@@ -244,6 +244,9 @@ All dev tool binaries (tsc, vite, tsx, playwright) are hoisted to root `node_mod
 
 ## Recommended MCP Servers
 
+**Both DocuFlow and Waymark are pre-registered in `.mcp.json`** and will be auto-loaded
+by Copilot CLI. No manual registration step is needed for this project.
+
 For Copilot sessions in this repository:
 
 **GitHub MCP** — Repository data, issues, workflows, CI status
