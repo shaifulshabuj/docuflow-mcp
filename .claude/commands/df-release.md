@@ -252,6 +252,14 @@ After every release cycle, append a new entry below. Include:
 
 <!-- Newest entry first -->
 
+### 2026-05-09 | Session: v1.3.1 patch release (UI nav + Settings fixes)
+- **`release.js` updateChangelog() was broken:** The old implementation inserted a blank versioned block ABOVE `[Unreleased]` instead of replacing the `[Unreleased]` header. Fixed to use `findIndex(/## \[Unreleased\]/i)` and replace in place. This fix is now in `scripts/release.js`.
+- **`release.js` aborts on untracked files:** `git status --porcelain` outputs `??` lines for untracked files too. Must delete or `.gitignore` session artifacts (screenshots, logs) before running release.js.
+- **CLI dep must be exact (no `^`):** `packages/cli/package.json` `dependencies["@doquflow/server"]` must be exact version (`"1.3.1"`, not `"^1.3.1"`). The pre-release-check.sh was checking for `^` (wrong) — fixed to check for exact version.
+- **Changelog entries should be written before release:** Write `[Unreleased]` content AS you develop each fix. The release script then promotes it automatically. Don't leave placeholder text in `[Unreleased]` — if the placeholder is there, the release script will promote the placeholder as the release notes.
+- **Pre-release check count is now 61** (not 47 as originally documented) — update references to the check count as the suite grows.
+- **Async release script output truncation:** The async bash shell truncated output after "✓ Updated packages/server/package.json". The release actually completed fully (all 4 versions bumped, tag pushed). Always verify with `git log --oneline -3` and `git tag -l` after release.js exits with code 0.
+
 ### 2026-05-07 | Session: release prep for v0.6.0
 - **Added UI/API to release scope:** `release.js` now bumps all 4 packages (was only server + cli)
 - **Build order critical:** `package.json` root build script must be `server → ui → cli → api` (not server → cli → ui → api) so CLI can copy ui-dist from packages/ui/dist/
