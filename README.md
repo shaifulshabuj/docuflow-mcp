@@ -396,7 +396,7 @@ See full documentation in:
 
 ## Verdict parsing contract
 
-DevLoop review consumers should output a canonical first non-empty line:
+DevLoop review consumers should output a canonical verdict line in the output:
 
 ```text
 Verdict: APPROVED
@@ -404,13 +404,55 @@ Verdict: NEEDS_WORK
 Verdict: REJECTED
 ```
 
-Parser behavior:
-- If the first non-empty line is a verdict line, that line is authoritative.
-- Canonical `Verdict: <TOKEN>` lines are prioritized over later conflicting verdict-like text.
-- Tolerated variants such as markdown/noise/case differences (for example `### **Verdict:** needs_work` or `Verdict: REJECTED ❌`) normalize to canonical tokens.
-- Unknown or malformed values (for example `Verdict: MAYBE`) resolve to `UNKNOWN` and are not coerced.
+### Acceptance Criteria
 
-If parsing returns `UNKNOWN`, re-run the reviewer and ensure the first non-empty output line is exactly one of the three canonical forms above.
+- [x] Parser recognizes canonical `Verdict: <TOKEN>` lines (case-insensitive)
+- [x] Parser strips markdown noise and normalizes tokens (e.g., `### **Verdict:** needs_work` → `NEEDS_WORK`)
+- [x] Canonical verdict lines anywhere in output are preferred over first-line heuristics
+- [x] Unknown or malformed values (e.g., `Verdict: MAYBE`) resolve to `UNKNOWN` without coercion
+- [x] Parser returns exactly one of: `APPROVED`, `NEEDS_WORK`, `REJECTED`, or `UNKNOWN`
+
+### Edge Cases
+
+| Scenario | Behavior |
+|----------|----------|
+| Multiple verdict lines | First canonical `Verdict: <TOKEN>` line wins |
+| Markdown formatting | `### **Verdict:** needs_work ✅` → normalizes to `NEEDS_WORK` |
+| Case variations | `verdict: ApPrOvEd` → normalizes to `APPROVED` |
+| Mixed whitespace | `Verdict  :  NEEDS_WORK` → recognized and normalized |
+| No verdict found | Returns `UNKNOWN` and prints diagnostic guidance |
+| Malformed verdict | `Verdict: MAYBE` → returns `UNKNOWN` (no coercion) |
+| Empty or whitespace-only output | Returns `UNKNOWN` |
+
+### Test Scenarios
+
+| Input | Expected Output | Notes |
+|-------|-----------------|-------|
+| `Verdict: APPROVED` | `APPROVED` | Canonical form |
+| `### **Verdict:** needs_work ✅` | `NEEDS_WORK` | Markdown noise stripped |
+| `verdict: rejected` | `REJECTED` | Case-insensitive |
+| Multiple lines with `Verdict: APPROVED` then `Verdict: REJECTED` | `APPROVED` | First canonical wins |
+| `Verdict: MAYBE` | `UNKNOWN` | Unknown token not coerced |
+| Empty output | `UNKNOWN` | No verdict found |
+| `Some text\nVerdict: APPROVED` | `APPROVED` | Canonical line later in output |
+
+### UNKNOWN Troubleshooting
+
+If verdict parsing returns `UNKNOWN`:
+
+1. **Check the reviewer output** — Run the review again and inspect the full output
+2. **Verify verdict line format** — Ensure output contains a line matching `Verdict: APPROVED|NEEDS_WORK|REJECTED`
+3. **Check for typos** — Common mistakes: `Veridict`, `Verdict:APPROVED` (no space), `Verdict = NEEDS_WORK`
+4. **Verify canonical tokens** — Only these three tokens are recognized: `APPROVED`, `NEEDS_WORK`, `REJECTED`
+5. **Review diagnostics** — Check stderr output from `cmd_review` for detailed diagnostics with the source file name
+6. **Re-run reviewer** — If using automated review, re-run with a fresh attempt; sometimes output is truncated
+
+**Example diagnostic output:**
+```
+Could not determine verdict from review output.
+Review source: /path/to/review.txt
+Expected first non-empty line format: Verdict: APPROVED|NEEDS_WORK|REJECTED
+```
 
 ---
 

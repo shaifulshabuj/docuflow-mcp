@@ -37,6 +37,7 @@ parse_review_verdict() {
   local review_text="${1:-}"
   local first_non_empty_line=""
   local line verdict
+  local canonical_verdict=""
 
   while IFS= read -r line; do
     if [[ "$line" =~ [^[:space:]] ]]; then
@@ -45,20 +46,33 @@ parse_review_verdict() {
     fi
   done <<< "$review_text"
 
+  # First pass: look for any canonical "Verdict: <TOKEN>" line anywhere
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^[[:space:]]*Verdict:[[:space:]]* ]]; then
+      verdict="$(extract_verdict_from_line "$line")"
+      if [ "$verdict" != "UNKNOWN" ]; then
+        canonical_verdict="$verdict"
+        break
+      fi
+    fi
+  done <<< "$review_text"
+
+  # If we found a canonical verdict, use it
+  if [ -n "$canonical_verdict" ]; then
+    printf '%s' "$canonical_verdict"
+    return 0
+  fi
+
+  # Fallback: check first non-empty line for any verdict-like pattern
   if [[ -n "$first_non_empty_line" ]]; then
-    if [[ "$(printf '%s' "$first_non_empty_line" | tr '[:lower:]' '[:upper:]')" =~ VERDICT[[:space:]]*: ]]; then
-      extract_verdict_from_line "$first_non_empty_line"
+    verdict="$(extract_verdict_from_line "$first_non_empty_line")"
+    if [ "$verdict" != "UNKNOWN" ]; then
+      printf '%s' "$verdict"
       return 0
     fi
   fi
 
-  while IFS= read -r line; do
-    if [[ "$line" =~ ^[[:space:]]*Verdict:[[:space:]]* ]]; then
-      extract_verdict_from_line "$line"
-      return 0
-    fi
-  done <<< "$review_text"
-
+  # Last resort: scan all lines for any valid verdict
   while IFS= read -r line; do
     verdict="$(extract_verdict_from_line "$line")"
     if [ "$verdict" != "UNKNOWN" ]; then
