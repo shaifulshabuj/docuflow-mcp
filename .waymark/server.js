@@ -6,9 +6,18 @@
 
 const { execSync } = require('child_process');
 
-const serverPath = execSync(
-  'node -e "console.log(require.resolve(\'@way_marks/server/dist/mcp/server.js\'))"',
-  { encoding: 'utf8' }
-).trim();
+let serverPath;
+try {
+  serverPath = execSync(
+    'node -e "console.log(require.resolve(\'@way_marks/server/dist/mcp/server.js\'))"',
+    { encoding: 'utf8' }
+  ).trim();
+} catch (err) {
+  process.stderr.write(
+    'Error: Could not resolve @way_marks/server. ' +
+    'Please install it by running: npx @way_marks/cli start\n'
+  );
+  process.exit(1);
+}
 
 require(serverPath);

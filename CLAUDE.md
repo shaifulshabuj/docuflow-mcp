@@ -51,6 +51,8 @@ DocuFlow is registered in **two places**:
 1. **`.mcp.json`** (project-level) — auto-loaded by Claude Code CLI; use tools as `mcp__docuflow__<tool>`
 2. **Claude Desktop global config** — registered under the server name from `docuflow init`; use bare tool names
 
+> **Note:** Within a Claude Code CLI session, the project-level `.mcp.json` takes precedence over the global Claude Desktop config when both register a server named `docuflow`. Always use the `mcp__docuflow__` prefix in Claude Code CLI to ensure the project-local instance is invoked.
+
 In Claude Code CLI sessions, always call DocuFlow tools with the `mcp__docuflow__` prefix:
 - `mcp__docuflow__read_module` — analyse a source file
 - `mcp__docuflow__list_modules` — scan all files in a directory
