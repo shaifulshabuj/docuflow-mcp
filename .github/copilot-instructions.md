@@ -256,8 +256,8 @@ For Copilot sessions in this repository:
 - Useful for: navigating `packages/*/src/`, cross-package searches
 
 **DocuFlow MCP** — This project's own wiki knowledge base
-- Run `docuflow init` if not already registered
-- Use `query_wiki` for questions about the codebase
+- Pre-registered in `.mcp.json`; tools are available as `mcp__docuflow__<tool>`
+- Key tools: `mcp__docuflow__read_module`, `mcp__docuflow__list_modules`, `mcp__docuflow__query_wiki`, `mcp__docuflow__write_spec`
 
 <!-- DEVLOOP:COPILOT:START -->
 # GitHub Copilot Instructions — DevLoop Worker
