@@ -381,7 +381,6 @@ async function syncWithAI(
 async function scheduledLintWithAI(projectPath: string, bridge: AIBridge, depth: number = 0): Promise<void> {
   if (bridge === "none" || depth >= 4) {
     // Lint is best-effort — silent return at terminal level (no directIngestAll)
-    if (bridge === "none" && depth === 0) await directLint(projectPath);
     return;
   }
 
@@ -532,6 +531,9 @@ export async function recordFailover(
   try {
     const data = await readPidFile(projectPath);
     if (!data) return;
+    if (!data.failover) {
+      data.failover = { count: 0, last_at: null, from: null, to: null, reason: null };
+    }
     data.failover.count += 1;
     data.failover.last_at = new Date().toISOString();
     data.failover.from = from;
