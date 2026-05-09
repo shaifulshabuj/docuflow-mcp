@@ -111,7 +111,7 @@ jobs:
           HELP=$(node packages/cli/dist/index.js)
           for cmd in "watch stop" "watch status" "watch restart" \
                      "sync --ai" "--copilot" "--claude" "sync --since-commit"; do
-            echo "$HELP" | grep -q "$cmd" \
+            echo "$HELP" | grep -qF -- "$cmd" \
               && echo "  ✓ help: $cmd" \
               || (echo "  ✗ MISSING from help: $cmd" && exit 1)
           done
