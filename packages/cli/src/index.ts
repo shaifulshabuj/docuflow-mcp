@@ -107,6 +107,17 @@ if (cmd === '--version' || cmd === '-v') {
     })
   );
 
+// ── recent — show recent DevLoop task activity ────────────────────────────────
+} else if (cmd === 'recent') {
+  const daysFlag = getFlagValue('--days');
+  const fmt = getFlagValue('--format') as 'table' | 'md' | undefined;
+  import('./commands/recent').then(m =>
+    m.run({
+      days:   daysFlag ? (isNaN(parseInt(daysFlag, 10)) ? 7 : parseInt(daysFlag, 10)) : 7,
+      format: fmt ?? 'table',
+    })
+  );
+
 } else {
   console.log(`DocuFlow v${version}`);
   console.log('');
@@ -151,6 +162,7 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  update --check          Check whether a newer version is published (no install)');
   console.log('  update --force          Reinstall even when already on the latest version');
   console.log('  upgrade                 Alias for "update"');
+  console.log('  recent [--days N] [--format table|md]   Show recent DevLoop task activity');
   console.log('');
   console.log('Options:');
   console.log('  --version, -v                    Print version number');
