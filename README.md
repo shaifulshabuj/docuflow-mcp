@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/e8e75f1e-9fcb-48ab-ae9d-29b14dea2212
+
 # Docuflow MCP — Developer Guide
 
 Private development repository for the Docuflow MCP server.
