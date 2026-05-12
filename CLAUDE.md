@@ -431,3 +431,16 @@ Tokens    ↑ 87.0k • ↓ 534 • 65.3k (cached)
 Changes   +0 -0
 Requests  15 Premium (17s)
 Tokens    ↑ 59.9k • ↓ 504 • 29.7k (cached)
+
+### From TASK-20260511-082835 (2026-05-11)
+- When documenting auto-discovery paths, verify the full list against source code (e.g., `ui.ts:263-268`) rather than listing only the obvious subdirectories — the home root itself is often scanned as the first entry and is easy to omit.
+- Auto-generated comments in output files (like git hooks written by `init.ts`) should be treated as source-of-truth for their own content but flagged when they contradict higher-level documentation elsewhere in the same file — both the comment and the broader doc must stay consistent, which may require patching the generator (`init.ts`) rather than just the output.
+- When a spec contains an incorrect count (e.g., "9 REST endpoints"), verify by tracing every endpoint to its implementation file and line before accepting the count — the reviewer caught that `/api/graph` at `ui.ts:328` made the real count 10, not 9.
+- Documentation files that catalogue tool signatures must be validated against the actual tool registration list (e.g., `packages/server/src/index.ts`) to ensure zero invented or missing entries — a 15-tool list confirmed against registration is the correct bar.
+
+### From TASK-20260511-085059 (2026-05-11)
+- Validate filenames with a strict regex (`/^TASK-\d{8}-\d{6}\.md$/`) before passing them to `execSync` — a cheap guard that eliminates shell-injection surface at the boundary.
+- When collecting items across entities (e.g. `tasks.flatMap(t => t.commits)`), deduplicate the result; a single commit referencing two task IDs inflates counts without a dedupe step.
+- Normalize CLI flag values early with a single expression like `Math.max(1, isNaN(parsed) ? default : parsed)` rather than spreading the guard across multiple conditional branches.
+- Unrecognized enum-like flag values (e.g. `--format csv`) should emit a user-facing warning rather than silently falling back to a default — silent fallthrough hides misconfiguration.
+- Keep format-specific renderers (e.g. `renderMarkdown`) fully free of presentation helpers (ANSI color functions) so machine-readable output paths are provably clean without runtime inspection.
