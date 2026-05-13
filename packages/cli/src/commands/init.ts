@@ -151,7 +151,7 @@ lint_wiki({ project_path: "${projectDir}" })
 
 \`\`\`
 .docuflow/
-├── specs/           Legacy spec files written by write_spec
+├── specs/           Spec files written by write_spec
 ├── wiki/            LLM-generated wiki pages
 │   ├── entities/    Named things (services, APIs, databases)
 │   ├── concepts/    Design patterns, principles, integrations
@@ -272,7 +272,23 @@ async function writeAgentsMd(projectDir: string): Promise<void> {
   }
 }
 
-export async function run(): Promise<void> {
+export interface InitResult {
+  ok: boolean;
+  path: string;
+  details: string[];
+}
+
+/**
+ * Core init logic — creates the .docuflow/ structure, registers MCP configs,
+ * writes CLAUDE.md/AGENTS.md, installs git hook, and registers in global registry.
+ *
+ * Accepts the target projectDir explicitly so it can be called from both the CLI
+ * (which uses process.cwd()) and the API (/api/init which receives the path from
+ * the request body).
+ */
+export async function runInit(projectDir: string): Promise<InitResult> {
+  const details: string[] = [];
+
   const configPath = getClaudeDesktopConfigPath();
   const vscodeConfigPath = getVSCodeMcpConfigPath();
   const copilotCliConfigPath = getCopilotCliMcpConfigPath();
@@ -281,55 +297,50 @@ export async function run(): Promise<void> {
   const nodeBin = process.execPath;
 
   // Register in Claude Desktop config
-  let config: Record<string, any> = {};
   try {
-    const raw = await fsp.readFile(configPath, "utf8");
-    config = JSON.parse(raw);
-  } catch {
-    // File doesn't exist yet — that's fine, we'll create it
-  }
-  if (!config.mcpServers) config.mcpServers = {};
-  config.mcpServers.docuflow = { command: nodeBin, args: [serverBin] };
-  await fsp.mkdir(path.dirname(configPath), { recursive: true });
-  await fsp.writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+    let config: Record<string, unknown> = {};
+    try {
+      const raw = await fsp.readFile(configPath, "utf8");
+      config = JSON.parse(raw) as Record<string, unknown>;
+    } catch { /* File doesn't exist yet — that's fine */ }
+    if (!config.mcpServers) config.mcpServers = {};
+    (config.mcpServers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin] };
+    await fsp.mkdir(path.dirname(configPath), { recursive: true });
+    await fsp.writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+    details.push("Claude Desktop MCP registered");
+  } catch { details.push("Claude Desktop — skipped (not installed)"); }
 
   // Register in VS Code (GitHub Copilot) user MCP config
   let vscodeRegistered = false;
-  let vscodeConfig: Record<string, any> = {};
   try {
-    const raw = await fsp.readFile(vscodeConfigPath, "utf8");
-    vscodeConfig = JSON.parse(raw);
-  } catch {
-    // File may not exist — create it
-  }
-  if (!vscodeConfig.servers) vscodeConfig.servers = {};
-  vscodeConfig.servers.docuflow = { command: nodeBin, args: [serverBin], type: "stdio" };
-  try {
+    let vscodeConfig: Record<string, unknown> = {};
+    try {
+      const raw = await fsp.readFile(vscodeConfigPath, "utf8");
+      vscodeConfig = JSON.parse(raw) as Record<string, unknown>;
+    } catch { /* File may not exist */ }
+    if (!vscodeConfig.servers) vscodeConfig.servers = {};
+    (vscodeConfig.servers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin], type: "stdio" };
     await fsp.mkdir(path.dirname(vscodeConfigPath), { recursive: true });
     await fsp.writeFile(vscodeConfigPath, JSON.stringify(vscodeConfig, null, 2) + "\n", "utf8");
     vscodeRegistered = true;
-  } catch {
-    // VS Code not installed or config dir not writable — skip silently
-  }
+    details.push("VS Code Copilot MCP registered");
+  } catch { /* VS Code not installed — skip */ }
 
   // Register in GitHub Copilot CLI MCP config (~/.copilot/mcp-config.json)
   let copilotCliRegistered = false;
-  let copilotCliConfig: Record<string, any> = {};
   try {
-    const raw = await fsp.readFile(copilotCliConfigPath, "utf8");
-    copilotCliConfig = JSON.parse(raw);
-  } catch {
-    // File may not exist yet
-  }
-  if (!copilotCliConfig.mcpServers) copilotCliConfig.mcpServers = {};
-  copilotCliConfig.mcpServers.docuflow = { type: "local", command: nodeBin, args: [serverBin], tools: ["*"] };
-  try {
+    let copilotCliConfig: Record<string, unknown> = {};
+    try {
+      const raw = await fsp.readFile(copilotCliConfigPath, "utf8");
+      copilotCliConfig = JSON.parse(raw) as Record<string, unknown>;
+    } catch { /* File may not exist yet */ }
+    if (!copilotCliConfig.mcpServers) copilotCliConfig.mcpServers = {};
+    (copilotCliConfig.mcpServers as Record<string, unknown>).docuflow = { type: "local", command: nodeBin, args: [serverBin], tools: ["*"] };
     await fsp.mkdir(path.dirname(copilotCliConfigPath), { recursive: true });
     await fsp.writeFile(copilotCliConfigPath, JSON.stringify(copilotCliConfig, null, 2) + "\n", "utf8");
     copilotCliRegistered = true;
-  } catch {
-    // Copilot CLI not installed — skip silently
-  }
+    details.push("Copilot CLI MCP registered");
+  } catch { /* Copilot CLI not installed — skip */ }
 
   // Register in OpenAI Codex CLI (~/.codex/config.toml in TOML format)
   let codexCliRegistered = false;
@@ -342,106 +353,116 @@ export async function run(): Promise<void> {
       await fsp.writeFile(codexConfigPath, tomlContent + entry, "utf8");
     }
     codexCliRegistered = true;
-  } catch {
-    // Codex CLI not installed — skip silently
-  }
+    details.push("Codex CLI MCP registered");
+  } catch { /* Codex CLI not installed — skip */ }
+
+  // Suppress unused-variable warnings when variables are only used in console.log branches
+  void vscodeRegistered;
+  void copilotCliRegistered;
+  void codexCliRegistered;
 
   // Create .docuflow/ directory structure
-  const projectDir = process.cwd();
   const docuflowDir = path.join(projectDir, ".docuflow");
-  const specsDir = path.join(docuflowDir, "specs");
-  const wikiDir = path.join(docuflowDir, "wiki");
-  const sourcesDir = path.join(docuflowDir, "sources");
-  const entitiesDir = path.join(wikiDir, "entities");
-  const conceptsDir = path.join(wikiDir, "concepts");
-  const timelinesDir = path.join(wikiDir, "timelines");
-  const synthesesDir = path.join(wikiDir, "syntheses");
+  const specsDir    = path.join(docuflowDir, "specs");
+  const wikiDir     = path.join(docuflowDir, "wiki");
+  const sourcesDir  = path.join(docuflowDir, "sources");
 
-  await fsp.mkdir(specsDir, { recursive: true });
-  await fsp.mkdir(entitiesDir, { recursive: true });
-  await fsp.mkdir(conceptsDir, { recursive: true });
-  await fsp.mkdir(timelinesDir, { recursive: true });
-  await fsp.mkdir(synthesesDir, { recursive: true });
-  await fsp.mkdir(sourcesDir, { recursive: true });
+  await fsp.mkdir(specsDir,                           { recursive: true });
+  await fsp.mkdir(path.join(wikiDir, "entities"),     { recursive: true });
+  await fsp.mkdir(path.join(wikiDir, "concepts"),     { recursive: true });
+  await fsp.mkdir(path.join(wikiDir, "timelines"),    { recursive: true });
+  await fsp.mkdir(path.join(wikiDir, "syntheses"),    { recursive: true });
+  await fsp.mkdir(sourcesDir,                         { recursive: true });
+  details.push("Created .docuflow/ directory structure");
 
   // Copy or create template files
   await copyTemplateFile("schema.md", path.join(docuflowDir, "schema.md"));
-  await copyTemplateFile("index.md", path.join(docuflowDir, "index.md"));
-  await copyTemplateFile("log.md", path.join(docuflowDir, "log.md"));
+  await copyTemplateFile("index.md",  path.join(docuflowDir, "index.md"));
+  await copyTemplateFile("log.md",    path.join(docuflowDir, "log.md"));
+  details.push("Wrote schema.md, index.md, log.md");
 
-  // Generate CLAUDE.md so Claude Code picks up DocuFlow automatically
+  // Generate CLAUDE.md
   await writeClaudeMd(projectDir);
+  details.push("Wrote CLAUDE.md");
 
-  // Generate AGENTS.md so OpenAI Codex picks up DocuFlow automatically
+  // Generate AGENTS.md
   await writeAgentsMd(projectDir);
+  details.push("Wrote AGENTS.md");
 
-  // Write .vscode/mcp.json for project-level workspace MCP config (shareable via git)
-  // Uses npx so it works on any machine — safe to commit
-  const vscodeDirPath = path.join(projectDir, ".vscode");
-  const vscodeWorkspaceMcpPath = path.join(vscodeDirPath, "mcp.json");
-  let workspaceMcpConfig: Record<string, any> = {};
+  // Write .vscode/mcp.json for project-level workspace MCP config
   try {
-    const raw = await fsp.readFile(vscodeWorkspaceMcpPath, "utf8");
-    workspaceMcpConfig = JSON.parse(raw);
-  } catch {
-    // File doesn't exist yet
-  }
-  if (!workspaceMcpConfig.servers) workspaceMcpConfig.servers = {};
-  workspaceMcpConfig.servers.docuflow = {
-    command: "npx",
-    args: ["-y", "-p", "@doquflow/server", "docuflow-server"],
-    type: "stdio",
-  };
-  await fsp.mkdir(vscodeDirPath, { recursive: true });
-  await fsp.writeFile(vscodeWorkspaceMcpPath, JSON.stringify(workspaceMcpConfig, null, 2) + "\n", "utf8");
+    const vscodeDirPath        = path.join(projectDir, ".vscode");
+    const vscodeWorkspaceMcpPath = path.join(vscodeDirPath, "mcp.json");
+    let workspaceMcpConfig: Record<string, unknown> = {};
+    try {
+      const raw = await fsp.readFile(vscodeWorkspaceMcpPath, "utf8");
+      workspaceMcpConfig = JSON.parse(raw) as Record<string, unknown>;
+    } catch { /* File doesn't exist yet */ }
+    if (!workspaceMcpConfig.servers) workspaceMcpConfig.servers = {};
+    (workspaceMcpConfig.servers as Record<string, unknown>).docuflow = {
+      command: "npx",
+      args: ["-y", "-p", "@doquflow/server", "docuflow-server"],
+      type: "stdio",
+    };
+    await fsp.mkdir(vscodeDirPath, { recursive: true });
+    await fsp.writeFile(vscodeWorkspaceMcpPath, JSON.stringify(workspaceMcpConfig, null, 2) + "\n", "utf8");
+    details.push("Wrote .vscode/mcp.json");
+  } catch { /* non-fatal */ }
 
   // Add .docuflow/ to .gitignore if present and not already listed
-  const gitignorePath = path.join(process.cwd(), ".gitignore");
-  if (fs.existsSync(gitignorePath)) {
-    const gitignore = await fsp.readFile(gitignorePath, "utf8");
-    if (!gitignore.includes(".docuflow/") && !gitignore.includes(".docuflow")) {
-      await fsp.appendFile(gitignorePath, "\n# Docuflow\n.docuflow/\n");
+  try {
+    const gitignorePath = path.join(projectDir, ".gitignore");
+    if (fs.existsSync(gitignorePath)) {
+      const gitignore = await fsp.readFile(gitignorePath, "utf8");
+      if (!gitignore.includes(".docuflow/") && !gitignore.includes(".docuflow")) {
+        await fsp.appendFile(gitignorePath, "\n# Docuflow\n.docuflow/\n");
+        details.push("Added .docuflow/ to .gitignore");
+      }
     }
-  }
+  } catch { /* non-fatal */ }
 
-  // Install git post-commit hook (auto-sync on every commit)
+  // Install git post-commit hook
   await installGitHook(projectDir);
+  details.push("Installed git post-commit hook");
 
-  // Register in global project registry so `docuflow ui` always finds this project
+  // Register in global project registry
   await registerInGlobalRegistry(projectDir);
+  details.push("Registered in global project registry (~/.docuflow/projects.json)");
 
-  console.log("\u2713 DocuFlow initialised successfully.");
+  return { ok: true, path: projectDir, details };
+}
+
+export async function run(): Promise<void> {
+  const result = await runInit(process.cwd());
+
+  const docuflowDir = path.join(result.path, ".docuflow");
+
+  console.log("✓ DocuFlow initialised successfully.");
   console.log("");
-  console.log("\ud83d\udcc1 Structure created:");
+  console.log("📁 Structure created:");
   console.log(`  ${docuflowDir}/`);
-  console.log(`  \u251c\u2500\u2500 specs/              (code specs written by the agent)`);
-  console.log(`  \u251c\u2500\u2500 wiki/               (LLM-generated wiki pages)`);
-  console.log(`  \u2502   \u251c\u2500\u2500 entities/`);
-  console.log(`  \u2502   \u251c\u2500\u2500 concepts/`);
-  console.log(`  \u2502   \u251c\u2500\u2500 timelines/`);
-  console.log(`  \u2502   \u2514\u2500\u2500 syntheses/`);
-  console.log(`  \u251c\u2500\u2500 sources/            (raw markdown documents to ingest)`);
-  console.log(`  \u251c\u2500\u2500 schema.md           (wiki configuration)`);
-  console.log(`  \u251c\u2500\u2500 index.md            (auto-maintained catalog)`);
-  console.log(`  \u2514\u2500\u2500 log.md              (operation log)`);
+  console.log(`  ├── specs/              (code specs written by the agent)`);
+  console.log(`  ├── wiki/               (LLM-generated wiki pages)`);
+  console.log(`  │   ├── entities/`);
+  console.log(`  │   ├── concepts/`);
+  console.log(`  │   ├── timelines/`);
+  console.log(`  │   └── syntheses/`);
+  console.log(`  ├── sources/            (raw markdown documents to ingest)`);
+  console.log(`  ├── schema.md           (wiki configuration)`);
+  console.log(`  ├── index.md            (auto-maintained catalog)`);
+  console.log(`  └── log.md              (operation log)`);
   console.log("");
-  console.log("\ud83d\udcdd Instruction files:");
-  console.log(`  CLAUDE.md  ✓ ${path.join(projectDir, "CLAUDE.md")}`);
-  console.log(`  AGENTS.md  ✓ ${path.join(projectDir, "AGENTS.md")}`);
+  console.log("📝 Steps completed:");
+  for (const line of result.details) {
+    console.log(`  ✓ ${line}`);
+  }
   console.log("");
-  console.log("\ud83d\udd27 MCP Registration:");
-  console.log(`  Claude Desktop:  \u2713 registered`);
-  console.log(`  VS Code Copilot: ${vscodeRegistered ? "\u2713 registered (user-level)" : "\u2014 not detected"}`);
-  console.log(`  Copilot CLI:     ${copilotCliRegistered ? "\u2713 registered (~/.copilot/mcp-config.json)" : "\u2014 not detected"}`);
-  console.log(`  Codex CLI:       ${codexCliRegistered ? "\u2713 registered (~/.codex/config.toml)" : "\u2014 not detected"}`);
-  console.log(`  Workspace:       \u2713 .vscode/mcp.json written (commit to share with team)`);
-  console.log("");
-  console.log("\ud83d\udcd6 Next steps:");
+  console.log("📖 Next steps:");
   console.log("  1. Edit .docuflow/schema.md to customize your wiki domain");
   console.log("  2. Add markdown docs to .docuflow/sources/ then ingest them");
   console.log("  3. Restart Claude Desktop / reload VS Code / restart Copilot CLI");
   console.log("");
-  console.log("\u26a1 Auto-sync options:");
+  console.log("⚡ Auto-sync options:");
   console.log("  docuflow watch           # background daemon (watches for file changes)");
   console.log("  docuflow watch --ai      # + Claude/Codex documents code changes automatically");
   console.log("  docuflow sync            # one-shot sync (good for CI/CD)");
