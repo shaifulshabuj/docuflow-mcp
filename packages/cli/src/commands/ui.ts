@@ -2,7 +2,7 @@
  * docuflow ui / docuflow start
  *
  * Starts the DocuFlow web interface — a single Express server on port 48821 that serves:
- *   • All /api/* routes (projects, wiki, health, activity, ask, search)
+ *   • All /api/* routes (projects, wiki, health, activity, ask, search, sync, init, watch)
  *   • Static Vite build from ui-dist/ (bundled with this CLI package)
  *   • SPA fallback — any non-API, non-asset route returns index.html
  *
@@ -10,14 +10,21 @@
  * share the same origin with zero CORS friction.
  */
 
-import { exec }   from 'node:child_process';
-import http       from 'node:http';
-import path       from 'node:path';
-import os         from 'node:os';
-import fs         from 'node:fs';
-import fsp        from 'node:fs/promises';
-import express    from 'express';
-import cors       from 'cors';
+import { exec, spawn } from 'node:child_process';
+import http             from 'node:http';
+import path             from 'node:path';
+import os               from 'node:os';
+import fs               from 'node:fs';
+import fsp              from 'node:fs/promises';
+import express          from 'express';
+import cors             from 'cors';
+import { runInit }      from './init';
+import {
+  getPidFilePath,
+  readPidFile,
+  isProcessAlive,
+  type WatchPidData,
+} from './watch';
 
 // ── Tool loader ───────────────────────────────────────────────────────────────
 // Server tools live in @doquflow/server/dist/tools/<name>.js (CommonJS).
@@ -227,11 +234,13 @@ export async function run(opts: UiOptions = {}): Promise<void> {
   }
 
   // ── 2. Load server tools ────────────────────────────────────────────────
-  const listWikiTool   = loadTool('list-wiki',   'listWiki');
-  const lintWikiTool   = loadTool('lint-wiki',   'lintWiki');
-  const queryWikiTool  = loadTool('query-wiki',  'queryWiki');
-  const wikiSearchTool = loadTool('wiki-search', 'wikiSearch');
-  const buildGraphTool = loadTool('build-graph', 'buildGraph');
+  const listWikiTool    = loadTool('list-wiki',      'listWiki');
+  const lintWikiTool    = loadTool('lint-wiki',       'lintWiki');
+  const queryWikiTool   = loadTool('query-wiki',      'queryWiki');
+  const wikiSearchTool  = loadTool('wiki-search',     'wikiSearch');
+  const buildGraphTool  = loadTool('build-graph',     'buildGraph');
+  const ingestSourceTool = loadTool('ingest-source',  'ingestSource');
+  const updateIndexTool  = loadTool('update-index',   'updateIndex');
 
   // ── 3. Express app ──────────────────────────────────────────────────────
   const app = express();
@@ -376,6 +385,149 @@ export async function run(opts: UiOptions = {}): Promise<void> {
     if (!projectPath || !query) return res.status(400).json({ error: 'path and q required' });
     try {
       return res.json(await wikiSearchTool({ project_path: projectPath, query }));
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // ── Sync: ingest all sources → rebuild index → lint ──────────────────────
+
+  app.post('/api/sync', async (req, res) => {
+    const { path: projectPath } = req.body as { path?: string };
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    const docuDir    = path.join(projectPath, '.docuflow');
+    const sourcesDir = path.join(docuDir, 'sources');
+    if (!fs.existsSync(docuDir)) {
+      return res.status(400).json({ error: '.docuflow not found — run init first' });
+    }
+    try {
+      // Collect source files
+      let sourceFiles: string[] = [];
+      try {
+        sourceFiles = (await fsp.readdir(sourcesDir)).filter(f => f.endsWith('.md'));
+      } catch { /* sources/ may not exist yet */ }
+
+      // Ingest each source file
+      let pagesCreated = 0;
+      const errors: string[] = [];
+      for (const filename of sourceFiles) {
+        try {
+          const r = await ingestSourceTool({ project_path: projectPath, source_filename: filename }) as { pages_created?: unknown[] };
+          pagesCreated += r.pages_created?.length ?? 0;
+        } catch (e: unknown) {
+          errors.push(`${filename}: ${(e as Error).message}`);
+        }
+      }
+
+      // Rebuild index and lint — wiki dir may be empty on a fresh/blank project
+      let health_score = 0;
+      try {
+        await updateIndexTool({ project_path: projectPath });
+        const lint = await lintWikiTool({ project_path: projectPath }) as { health_score?: number };
+        health_score = lint.health_score ?? 0;
+      } catch { /* empty wiki dir — health_score stays 0 */ }
+
+      return res.json({
+        sources_processed: sourceFiles.length,
+        pages_created: pagesCreated,
+        health_score,
+        errors,
+      });
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // ── Init: create .docuflow/ structure and register project ────────────────
+
+  app.post('/api/init', async (req, res) => {
+    const { path: projectPath } = req.body as { path?: string };
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    if (!fs.existsSync(projectPath)) {
+      return res.status(400).json({ error: 'path does not exist' });
+    }
+    try {
+      const result = await runInit(projectPath);
+      return res.json(result);
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // ── Watch daemon status / stop / start ────────────────────────────────────
+
+  app.get('/api/watch/status', async (req, res) => {
+    const projectPath = req.query.path as string;
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    try {
+      const data: WatchPidData | null = await readPidFile(projectPath);
+      if (!data) return res.json({ running: false });
+      const alive = isProcessAlive(data.pid);
+      if (!alive) return res.json({ running: false });
+      const uptimeMs  = Date.now() - new Date(data.started_at).getTime();
+      const uptimeMin = Math.floor(uptimeMs / 60_000);
+      return res.json({
+        running:    true,
+        pid:        data.pid,
+        bridge:     data.bridge,
+        started_at: data.started_at,
+        uptime:     uptimeMin < 60 ? `${uptimeMin}m` : `${Math.floor(uptimeMin / 60)}h ${uptimeMin % 60}m`,
+      });
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  app.post('/api/watch/stop', async (req, res) => {
+    const { path: projectPath } = req.body as { path?: string };
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    try {
+      const data: WatchPidData | null = await readPidFile(projectPath);
+      if (!data || !isProcessAlive(data.pid)) {
+        return res.json({ ok: true, message: 'Daemon not running' });
+      }
+      process.kill(data.pid, 'SIGTERM');
+      // Remove stale PID file — daemon will also try to clean it up on exit
+      setTimeout(async () => {
+        try { await fsp.unlink(getPidFilePath(projectPath)); } catch { /* already removed */ }
+      }, 2000);
+      return res.json({ ok: true, message: `Stopped watch daemon (PID ${data.pid})` });
+    } catch (e: unknown) {
+      return res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  app.post('/api/watch/start', async (req, res) => {
+    const { path: projectPath } = req.body as { path?: string };
+    if (!projectPath) return res.status(400).json({ error: 'path required' });
+    if (!fs.existsSync(projectPath)) {
+      return res.status(400).json({ error: 'path does not exist' });
+    }
+    if (!fs.existsSync(path.join(projectPath, '.docuflow'))) {
+      return res.status(400).json({ error: '.docuflow not found — run init first' });
+    }
+    try {
+      // Check if already running
+      const existing: WatchPidData | null = await readPidFile(projectPath);
+      if (existing && isProcessAlive(existing.pid)) {
+        return res.json({ ok: true, message: 'Watch daemon already running', pid: existing.pid });
+      }
+      // require.resolve fails in compiled ESM dist/ — fall back to the running entry point
+      let cliBin: string;
+      try {
+        cliBin = require.resolve('./index')
+          .replace(/\.ts$/, '.js')
+          .replace('/src/', '/dist/');
+      } catch {
+        cliBin = process.argv[1];
+      }
+      const child = spawn(process.execPath, [cliBin, 'watch'], {
+        cwd:      projectPath,
+        detached: true,
+        stdio:    'ignore',
+      });
+      child.unref();
+      return res.json({ ok: true, message: 'Watch daemon spawned' });
     } catch (e: unknown) {
       return res.status(500).json({ error: (e as Error).message });
     }
