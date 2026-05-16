@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-stop.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-stop.sh"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-subagent-stop.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-subagent-stop.sh"
           }
         ]
       }
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-notification.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-notification.sh"
           }
         ]
       }
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-session.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-session.sh"
           }
         ]
       }
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-session.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-session.sh"
           }
         ]
       }
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-permission.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-permission.sh"
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/20260409_building_documentation_maintainer_to_forget_boringness_of_manual_writting/docuflow-mcp/.claude/hooks/devloop-audit.sh"
+            "command": "/Volumes/SATECHI_WD_BLACK_2/dev/docuflow-mcp/.claude/hooks/devloop-audit.sh"
           }
         ]
       }
