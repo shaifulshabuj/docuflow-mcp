@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import { ensureDir, safeReadFile, writeFileAtomic } from "../filesystem";
 import { IngestResult, WikiPage, WikiPageFrontmatter } from "../types";
 import { categoryDir, type WikiCategory } from "../category-dir";
+import { passesEntityRules, type EntityCandidate } from "../extractor-rules";
 
 interface EntityReference {
   name: string;
@@ -59,18 +60,31 @@ function extractFromMarkdown(content: string): ExtractionOutput {
     .substring(0, 500);
 
   // Find headers (entities/concepts)
-  for (const line of lines) {
-    // ### Header → entity/concept
-    if (line.match(/^###\s+/)) {
-      const header = line.replace(/^###\s+/, "").trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    // ## / ### / #### Header → entity/concept candidate
+    const headingMatch = line.match(/^#{2,4}\s+(.+)/);
+    if (headingMatch) {
+      const header = headingMatch[1]!.trim();
       if (header && !header.startsWith("[") && !header.startsWith("{")) {
-        entities.push({ name: header, type: "concept" });
+        // Gather surrounding context: lines after this heading until next heading or blank+blank
+        const contextLines: string[] = [];
+        for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+          const l = lines[j]!;
+          if (/^#{1,4}\s/.test(l)) break;
+          contextLines.push(l);
+        }
+        const context = contextLines.join(" ").trim();
+        const candidate: EntityCandidate = { name: header, type: "concept", source: "heading", context };
+        if (passesEntityRules(candidate).ok) {
+          entities.push({ name: header, type: "concept" });
+        }
       }
     }
-    // **bold text** → potential entity (but not arrays or JSON)
+    // **bold text** → potential entity candidate (but not arrays or JSON)
     const boldMatches = line.matchAll(/\*\*([^*]+)\*\*/g);
     for (const match of boldMatches) {
-      const text = match[1].trim();
+      const text = match[1]!.trim();
       // Skip if it looks like JSON or code
       if (
         text.length > 2 &&
@@ -80,7 +94,17 @@ function extractFromMarkdown(content: string): ExtractionOutput {
         !text.includes('"') &&
         !text.includes("`")
       ) {
-        entities.push({ name: text, type: "entity" });
+        // Gather surrounding context: the current paragraph
+        const paraLines: string[] = [line];
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          if (lines[j]!.trim() === "") break;
+          paraLines.push(lines[j]!);
+        }
+        const context = paraLines.join(" ").trim();
+        const candidate: EntityCandidate = { name: text, type: "entity", source: "bold", context };
+        if (passesEntityRules(candidate).ok) {
+          entities.push({ name: text, type: "entity" });
+        }
       }
     }
   }
