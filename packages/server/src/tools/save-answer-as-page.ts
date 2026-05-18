@@ -1,13 +1,14 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
 import { ensureDir, writeFileAtomic } from "../filesystem";
+import { categoryDir, type WikiCategory } from "../category-dir";
 
 export async function saveAnswerAsPage(input: {
   project_path: string;
   question: string;
   answer: string;
   page_title: string;
-  category?: "synthesis" | "entity" | "concept" | "timeline";
+  category?: WikiCategory;
   source_page_ids?: string[];
 }): Promise<{
   saved_page_id: string;
@@ -20,19 +21,16 @@ export async function saveAnswerAsPage(input: {
     const docuDir = path.join(projectPath, ".docuflow");
     const wikiDir = path.join(docuDir, "wiki");
 
-    // Use provided category or default to synthesis
     const category = input.category ?? "synthesis";
-    const categoryDir = path.join(wikiDir, category + "s");
-    await ensureDir(categoryDir);
+    const catDirPath = path.join(wikiDir, categoryDir(category));
+    await ensureDir(catDirPath);
 
-    // Generate page ID from title
     const pageId = `query_${input.page_title
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "_")
       .replace(/_+/g, "_")
       .substring(0, 50)}`;
 
-    // Generate frontmatter
     const now = new Date().toISOString();
     const sources = input.source_page_ids ?? [];
     const frontmatterYaml = `---
@@ -45,14 +43,6 @@ outbound_links: ${JSON.stringify(sources)}
 ---
 `;
 
-    const CATEGORY_DIR: Record<string, string> = {
-      synthesis: "syntheses",
-      entity: "entities",
-      concept: "concepts",
-      timeline: "timelines",
-    };
-
-    // Build page content
     const pageContent = `${frontmatterYaml}
 # ${input.page_title}
 
@@ -68,7 +58,7 @@ ${input.answer}
 
 ${
   sources.length > 0
-    ? sources.map((s) => `- [\`${s}\`](../${CATEGORY_DIR[category] ?? category + "s"}/${s}.md)`).join("\n")
+    ? sources.map((s) => `- [\`${s}\`](../${categoryDir(category)}/${s}.md)`).join("\n")
     : "No source pages linked."
 }
 
@@ -78,11 +68,9 @@ ${
 *To refine further, add more source documents and re-ingest.*
 `;
 
-    // Write the page file
-    const pageFile = path.join(categoryDir, `${pageId}.md`);
-    const bytes = await writeFileAtomic(pageFile, pageContent);
+    const pageFile = path.join(catDirPath, `${pageId}.md`);
+    await writeFileAtomic(pageFile, pageContent);
 
-    // Also update log.md to record this
     const logFile = path.join(docuDir, "log.md");
     try {
       let logContent = "";
@@ -93,7 +81,7 @@ ${
         logContent = "# Operation Log\n\n";
       }
 
-      const timestamp = now.split("T")[0]; // YYYY-MM-DD
+      const timestamp = now.split("T")[0];
       const logEntry = `## [${timestamp}] query-result | Saved answer as ${pageId}\n\n`;
       logContent += logEntry;
 

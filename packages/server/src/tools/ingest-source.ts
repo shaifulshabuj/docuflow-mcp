@@ -2,6 +2,7 @@ import path from "node:path";
 import fsp from "node:fs/promises";
 import { ensureDir, safeReadFile, writeFileAtomic } from "../filesystem";
 import { IngestResult, WikiPage, WikiPageFrontmatter } from "../types";
+import { categoryDir, type WikiCategory } from "../category-dir";
 
 interface EntityReference {
   name: string;
@@ -245,15 +246,8 @@ export async function ingestSource(input: {
     // Write all pages
     const pagesCreated: string[] = [];
     for (const page of wikiPages) {
-      // Determine category subdirectory - use correct plural forms
-      const pluralMap: Record<string, string> = {
-        entity: "entities",
-        concept: "concepts",
-        timeline: "timelines",
-        synthesis: "syntheses",
-      };
-      const categoryDir = path.join(wikiDir, pluralMap[page.category] || page.category + "s");
-      await ensureDir(categoryDir);
+      const catDirPath = path.join(wikiDir, categoryDir(page.category as WikiCategory));
+      await ensureDir(catDirPath);
 
       // Create page file with frontmatter
       const frontmatterYaml = `---
@@ -267,7 +261,7 @@ outbound_links: ${JSON.stringify(page.frontmatter.outbound_links)}
 `;
 
       const pageContent = frontmatterYaml + "\n" + page.content;
-      const pageFile = path.join(categoryDir, `${page.id}.md`);
+      const pageFile = path.join(catDirPath, `${page.id}.md`);
       await writeFileAtomic(pageFile, pageContent);
       pagesCreated.push(page.id);
     }
