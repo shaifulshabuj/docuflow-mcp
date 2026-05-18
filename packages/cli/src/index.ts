@@ -118,6 +118,16 @@ if (cmd === '--version' || cmd === '-v') {
     })
   );
 
+// ── rewiki — re-ingest all sources with new extractor rules ──────────────────
+} else if (cmd === 'rewiki') {
+  import('./commands/rewiki').then(m =>
+    m.run({
+      dryRun:   hasFlag('--dry-run'),
+      noBackup: hasFlag('--no-backup'),
+      quiet:    hasFlag('--quiet', '-q'),
+    })
+  );
+
 } else {
   console.log(`DocuFlow v${version}`);
   console.log('');
@@ -163,6 +173,10 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  update --force          Reinstall even when already on the latest version');
   console.log('  upgrade                 Alias for "update"');
   console.log('  recent [--days N] [--format table|md]   Show recent DevLoop task activity');
+  console.log('  rewiki                  Re-ingest all sources with current extractor rules (migration)');
+  console.log('  rewiki --dry-run        Preview what would change without writing anything');
+  console.log('  rewiki --no-backup      Skip wiki backup (faster, irreversible)');
+  console.log('  rewiki --quiet          Suppress output (CI mode)');
   console.log('');
   console.log('Options:');
   console.log('  --version, -v                    Print version number');

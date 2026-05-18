@@ -385,6 +385,13 @@ docuflow watch stop                   # Stop daemon
 - Git post-commit hook runs `docuflow sync --ai` after commits
 - Non-blocking (runs in background)
 
+**Re-ingest with updated rules (migration):**
+```bash
+docuflow rewiki --dry-run   # preview cleanup (no writes)
+docuflow rewiki             # apply — backs up wiki first
+docuflow rewiki --no-backup # skip backup (faster, irreversible)
+```
+
 See [`LOCAL_SYNC_SETUP.md`](./LOCAL_SYNC_SETUP.md) for full workflow guide.
 
 ### For Claude/LLM Agents

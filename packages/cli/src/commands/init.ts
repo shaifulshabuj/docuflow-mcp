@@ -147,6 +147,12 @@ lint_wiki({ project_path: "${projectDir}" })
 → fix orphans and broken refs
 \`\`\`
 
+### Maintenance — re-ingest with updated rules
+\`\`\`
+docuflow rewiki --dry-run   # preview cleanup
+docuflow rewiki             # apply (backs up wiki first)
+\`\`\`
+
 ## Storage Layout
 
 \`\`\`

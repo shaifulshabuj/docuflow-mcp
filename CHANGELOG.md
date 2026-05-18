@@ -1,5 +1,10 @@
 # Docuflow Changelog
 
+## [Unreleased]
+
+### Added
+- feat: add `docuflow rewiki` migration command (#4) — re-ingests all sources with current extractor rules, backs up wiki, migrates synthesiss/ typo, and produces an audit report
+
 ## [1.5.2] - 2026-05-13
 
 
