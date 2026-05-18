@@ -292,7 +292,17 @@ TOOL_COUNT=$(grep 'from "\./tools/' packages/server/src/index.ts 2>/dev/null | w
   && check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "pass" \
   || check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "fail"
 
-# ── 9. UI + API type-checks and production build ──────────────────────────────
+# ── 9. Schema.md not a placeholder ───────────────────────────────────────────
+
+echo ""
+echo "Checking schema.md..."
+if grep -q "\[Edit this file to customize your wiki\]" .docuflow/schema.md 2>/dev/null; then
+  check "schema.md is not a placeholder (fill in .docuflow/schema.md)" "fail"
+else
+  check "schema.md is not a placeholder" "pass"
+fi
+
+# ── 10. UI + API type-checks and production build ─────────────────────────────
 
 echo ""
 echo "Checking UI and API builds..."
