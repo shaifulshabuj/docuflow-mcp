@@ -3,7 +3,7 @@
  * generate-npm-chart.js
  *
  * Fetches download stats for @doquflow/cli and @doquflow/server from the npm
- * downloads API, then writes a self-contained SVG line chart to docs/npm-downloads.svg.
+ * downloads API, then writes a self-contained SVG line chart to docs/stats/npm-downloads.svg.
  *
  * Designed to run inside a GitHub Actions workflow on a schedule.
  * No external dependencies — uses Node.js built-in https module only.
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PACKAGES = ['@doquflow/cli', '@doquflow/server'];
-const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'npm-downloads.svg');
+const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'stats', 'npm-downloads.svg');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
