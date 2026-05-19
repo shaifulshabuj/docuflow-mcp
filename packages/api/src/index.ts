@@ -26,10 +26,8 @@ import os       from 'node:os';
 // ── Server tool imports (TypeScript source, resolved via tsconfig includes) ──
 import { listWiki }    from '../../server/src/tools/list-wiki';
 import { lintWiki }    from '../../server/src/tools/lint-wiki';
-import { queryWiki }   from '../../server/src/tools/query-wiki';
-import { wikiSearch }  from '../../server/src/tools/wiki-search';
+import { queryWiki, wikiSearch, ingestSource } from '@doquflow/core/lib';
 import { buildGraph }  from '../../server/src/tools/build-graph';
-import { ingestSource } from '../../server/src/tools/ingest-source';
 import { updateIndex }  from '../../server/src/tools/update-index';
 
 // ── Port resolution ───────────────────────────────────────────────────────────

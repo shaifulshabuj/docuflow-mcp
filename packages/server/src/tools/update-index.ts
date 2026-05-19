@@ -1,6 +1,6 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { ensureDir, safeReadFile, writeFileAtomic } from "../filesystem";
+import { ensureDir, safeReadFile, writeFileAtomic } from "@doquflow/core/lib";
 
 interface IndexEntry {
   id: string;

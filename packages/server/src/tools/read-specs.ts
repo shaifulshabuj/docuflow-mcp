@@ -1,7 +1,7 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { readJsonIfExists } from "../filesystem";
-import { SpecIndex } from "../types";
+import { readJsonIfExists } from "@doquflow/core/lib";
+import { SpecIndex } from "@doquflow/core/lib";
 
 const STALE_DAYS = 30;
 

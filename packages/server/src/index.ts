@@ -6,16 +6,14 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { readModule } from "./tools/read-module";
+// 4 core tools — now live in @doquflow/core (moved in v2.0 #28)
+import { readModule, ingestSource, wikiSearch, queryWiki, synthesizeAnswer } from "@doquflow/core/lib";
+
 import { listModules } from "./tools/list-modules";
 import { writeSpec } from "./tools/write-spec";
 import { readSpecs } from "./tools/read-specs";
-import { ingestSource } from "./tools/ingest-source";
 import { updateIndex } from "./tools/update-index";
 import { listWiki } from "./tools/list-wiki";
-import { wikiSearch } from "./tools/wiki-search";
-import { synthesizeAnswer } from "./tools/answer-synthesis";
-import { queryWiki } from "./tools/query-wiki";
 import { saveAnswerAsPage } from "./tools/save-answer-as-page";
 import { lintWiki } from "./tools/lint-wiki";
 import { getSchemataGuidance } from "./tools/get-schema-guidance";

@@ -1,7 +1,7 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { ensureDir, writeFileAtomic } from "../filesystem";
-import { categoryDir, type WikiCategory } from "../category-dir";
+import { ensureDir, writeFileAtomic } from "@doquflow/core/lib";
+import { categoryDir, type WikiCategory } from "@doquflow/core/lib";
 
 export async function saveAnswerAsPage(input: {
   project_path: string;

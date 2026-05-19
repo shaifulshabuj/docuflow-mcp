@@ -286,7 +286,9 @@ fi
 
 echo ""
 echo "Checking MCP tool count..."
-TOOL_COUNT=$(grep 'from "\./tools/' packages/server/src/index.ts 2>/dev/null | wc -l | tr -d ' ')
+TOOL_COUNT=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+  | node packages/server/dist/index.js 2>/dev/null \
+  | node -e "try{const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));console.log(d.result.tools.length)}catch(e){console.log(0)}")
 [ "$TOOL_COUNT" -ge 15 ] \
   && check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "pass" \
   || check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "fail"

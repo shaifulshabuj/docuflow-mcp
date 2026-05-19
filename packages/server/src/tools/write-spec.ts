@@ -1,7 +1,7 @@
 import path from "node:path";
-import { ensureDir, writeFileAtomic, readJsonIfExists } from "../filesystem";
+import { ensureDir, writeFileAtomic, readJsonIfExists } from "@doquflow/core/lib";
 import fsp from "node:fs/promises";
-import { SpecIndex } from "../types";
+import { SpecIndex } from "@doquflow/core/lib";
 
 // Per-project write lock: maps projectPath → promise chain so that concurrent
 // calls to writeSpec on the same project are always serialised. This prevents
