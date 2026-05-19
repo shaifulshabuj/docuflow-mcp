@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@doquflow/core": "2.0.0",
+    "@doquflow/studio": "2.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4"
   },
   "devDependencies": {

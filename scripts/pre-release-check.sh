@@ -312,14 +312,14 @@ echo ""
 echo "Checking UI and API builds..."
 
 # UI: TypeScript strict check
-if node_modules/.bin/tsc --noEmit -p packages/ui/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/studio/tsconfig.json 2>&1 | grep -q "error TS"; then
   check "UI TypeScript strict check (0 errors)" "fail"
 else
   check "UI TypeScript strict check (0 errors)" "pass"
 fi
 
 # UI: production build (vite)
-UI_BUILD_OUT=$(node_modules/.bin/vite build packages/ui 2>&1)
+UI_BUILD_OUT=$(node_modules/.bin/vite build packages/studio 2>&1)
 if echo "$UI_BUILD_OUT" | grep -qE "error|Error|failed"; then
   check "UI production build succeeds (vite build)" "fail"
 else
@@ -327,21 +327,21 @@ else
 fi
 
 # UI: dist/index.html produced
-[ -f "packages/ui/dist/index.html" ] \
+[ -f "packages/studio/ui-dist/index.html" ] \
   && check "UI dist/index.html produced" "pass" \
   || check "UI dist/index.html produced" "fail"
 
 # API: TypeScript strict check
-if node_modules/.bin/tsc --noEmit -p packages/api/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/studio/tsconfig.mcp.json 2>&1 | grep -q "error TS"; then
   check "API TypeScript strict check (0 errors)" "fail"
 else
   check "API TypeScript strict check (0 errors)" "pass"
 fi
 
 # API: source file exists
-[ -f "packages/api/src/index.ts" ] \
-  && check "packages/api/src/index.ts exists" "pass" \
-  || check "packages/api/src/index.ts exists" "fail"
+[ -f "packages/studio/src/api/index.ts" ] \
+  && check "packages/studio/src/api/index.ts exists" "pass" \
+  || check "packages/studio/src/api/index.ts exists" "fail"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
