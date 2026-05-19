@@ -106,15 +106,32 @@ jobs:
           test ! -f .docuflow/watch.pid && echo "✓ stale PID cleaned up"
         working-directory: ${{ github.workspace }}
 
-      - name: CLI help includes all new commands
+      - name: CLI core help shows the 5 core commands + ADVANCED pointer
         run: |
           HELP=$(node packages/cli/dist/index.js)
-          for cmd in "watch stop" "watch status" "watch restart" \
-                     "sync --ai" "--copilot" "--claude" "sync --since-commit"; do
+          for cmd in "init" "ingest" "query" "status" "rewiki" "ADVANCED"; do
             echo "$HELP" | grep -qF -- "$cmd" \
-              && echo "  ✓ help: $cmd" \
-              || (echo "  ✗ MISSING from help: $cmd" && exit 1)
+              && echo "  ✓ core help: $cmd" \
+              || (echo "  ✗ MISSING from core help: $cmd" && exit 1)
           done
+        working-directory: ${{ github.workspace }}
+
+      - name: CLI advanced help shows the advanced surface
+        run: |
+          ADV_HELP=$(node packages/cli/dist/index.js advanced --help)
+          for cmd in "watch" "sync" "ui" "review" "recent" "suggest" "update"; do
+            echo "$ADV_HELP" | grep -qF -- "$cmd" \
+              && echo "  ✓ advanced help: $cmd" \
+              || (echo "  ✗ MISSING from advanced help: $cmd" && exit 1)
+          done
+        working-directory: ${{ github.workspace }}
+
+      - name: Bare-form advanced commands still work (bright line — zero removal)
+        run: |
+          node packages/cli/dist/index.js watch status > /dev/null \
+            && echo "  ✓ bare-form 'watch status' still works"
+          node packages/cli/dist/index.js advanced watch status > /dev/null \
+            && echo "  ✓ 'advanced watch status' also works"
         working-directory: ${{ github.workspace }}
 
       - name: Bridge detection unit test
