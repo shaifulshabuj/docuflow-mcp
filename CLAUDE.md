@@ -1,7 +1,7 @@
+<!-- BEGIN DOCUFLOW -->
 # DocuFlow — AI Documentation Assistant
 
-DocuFlow is an MCP server that gives you structured access to this codebase and maintains a living wiki.
-It is registered in your Claude Desktop config and available as MCP tools in every session.
+DocuFlow preserves decision context for AI agents. Intent in, value out.
 
 ## MCP Registration
 
@@ -12,63 +12,60 @@ DocuFlow is registered in **two places**:
 > **Note:** Within a Claude Code CLI session, the project-level `.mcp.json` takes precedence over the global Claude Desktop config when both register a server named `docuflow`. Always use the `mcp__docuflow__` prefix in Claude Code CLI to ensure the project-local instance is invoked.
 
 In Claude Code CLI sessions, always call DocuFlow tools with the `mcp__docuflow__` prefix:
-- `mcp__docuflow__read_module` — analyse a source file
-- `mcp__docuflow__list_modules` — scan all files in a directory
 - `mcp__docuflow__query_wiki` — Q&A against the wiki
-- `mcp__docuflow__write_spec` — persist a spec
+- `mcp__docuflow__ingest_source` — fold a source into the wiki
+- `mcp__docuflow__wiki_search` — BM25 search across pages
+- `mcp__docuflow__read_module` — analyse a source file
 
 Waymark is registered as `waymark-docuflow-mcp` in `.mcp.json`. Use:
 - `mcp__waymark-docuflow-mcp__read_file` — read any file (policy-enforced)
 - `mcp__waymark-docuflow-mcp__write_file` — write/edit any file (policy-enforced)
 - `mcp__waymark-docuflow-mcp__bash` — run shell commands (policy-enforced)
 
-## Codebase Scanner Tools
+## Core tools (use these first)
 
-- **read_module** — Analyse a single source file. Returns language, classes, functions, dependencies, DB tables, endpoints, config refs, and raw content (first 8 KB).
-  - Example: `read_module({ path: "src/UserService.cs" })`
-- **list_modules** — Walk a directory and extract facts for every non-binary file. Use this to understand the full project in one call.
-  - Example: `list_modules({ path: "/path/to/your/project" })`
-- **write_spec** — Persist a markdown spec to `.docuflow/specs/<filename>.md` and update the index.
-  - Example: `write_spec({ project_path: "...", filename: "UserService", content: "# UserService\n..." })`
-- **read_specs** — Read previously written specs, optionally filtered by name.
-  - Example: `read_specs({ project_path: "..." })`
+- **query_wiki({ project_path, question })** — Ask the wiki. Returns an answer with citations.
+- **ingest_source({ project_path, source_filename })** — Fold a markdown source into the wiki.
+- **wiki_search({ project_path, query })** — BM25 search across all pages.
+- **read_module({ path })** — Read and extract facts from a single source file.
 
-## Wiki Pipeline Tools
+## CLI — Core Commands
 
-- **ingest_source** — Ingest a markdown file from `.docuflow/sources/` and generate wiki pages (entities, concepts).
-- **update_index** — Rebuild `.docuflow/index.md` from all wiki pages.
-- **list_wiki** — List all wiki pages, optionally filtered by category (entity/concept/timeline/synthesis).
-- **wiki_search** — BM25 search across all wiki pages. Returns ranked results with previews.
-- **query_wiki** — One-stop Q&A: searches wiki, synthesises an answer, returns source citations.
-- **synthesize_answer** — Generate a markdown synthesis from a list of specific wiki page IDs.
-- **save_answer_as_page** — Persist a synthesised answer back into the wiki (knowledge compounding).
-
-## Health & Guidance Tools
-
-- **lint_wiki** — Health check: orphan pages, broken refs, stale content, metadata gaps. Returns a 0–100 health score.
-- **get_schema_guidance** — Analyse what wiki pages should exist based on the schema and current state.
-- **preview_generation** — Preview what a tool will do before running it.
-
-## Common Workflows
-
-### First time — understand the codebase
 ```
-list_modules({ path: "..." })
-→ read the language breakdown and dependency map
-→ write_spec each important module
+docuflow query "<question>"         # ask the wiki from the shell
+docuflow ingest <source.md>         # add a source doc to the wiki
+docuflow status                     # wiki health and counts
+docuflow rewiki                     # re-ingest with current rules
+docuflow init                       # initialise .docuflow/ in this project
 ```
 
-### Ongoing — answer a question
+## Workflows
+
+### Answer a question
 ```
-query_wiki({ project_path: "...", question: "How does authentication work?" })
-→ save_answer_as_page if the answer is worth keeping
+mcp__docuflow__query_wiki({ project_path: ".", question: "How does authentication work?" })
 ```
 
-### Maintenance — check wiki health
+### Add new context
 ```
-lint_wiki({ project_path: "..." })
-→ fix orphans and broken refs
+# drop a markdown file in .docuflow/sources/
+mcp__docuflow__ingest_source({ project_path: ".", source_filename: "auth-design.md" })
 ```
+
+## Advanced tools
+
+Use when the core tools don't cover the workflow. Each has more parameters and side effects.
+
+- **list_modules** — Walk a directory tree and extract facts in bulk
+- **list_wiki** — Inventory pages by category, with staleness flags
+- **write_spec / read_specs** — Persistent agent-written specs
+- **save_answer_as_page** — Promote a synthesised answer into the wiki
+- **synthesize_answer** — Combine multiple pages into a markdown synthesis
+- **update_index** — Rebuild `.docuflow/index.md`
+- **lint_wiki** — Health checks: orphans, broken refs, stale content
+- **get_schema_guidance** — Recommend what pages should exist
+- **preview_generation** — Show what a tool will do before running
+- **generate_dependency_graph** — Build the import/shared-table graph
 
 ## Storage Layout
 
@@ -85,6 +82,7 @@ lint_wiki({ project_path: "..." })
 ├── index.md         Auto-maintained catalog
 └── log.md           Operation log
 ```
+<!-- END DOCUFLOW -->
 
 ---
 
