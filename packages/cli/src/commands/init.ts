@@ -99,7 +99,33 @@ export function buildClaudeMd(projectDir: string): string {
 DocuFlow is an MCP server that gives you structured access to this codebase and maintains a living wiki.
 It is registered in your Claude Desktop config and available as MCP tools in every session.
 
-## Codebase Scanner Tools
+## CLI — Core Commands
+
+Run these directly from your shell:
+
+\`\`\`bash
+docuflow query "<question>"       # Ask the wiki — returns answer with citations
+docuflow ingest <source.md>       # Add a source doc to the wiki
+docuflow ingest --all             # Ingest all docs in .docuflow/sources/
+docuflow status                   # Wiki health and page counts
+docuflow rewiki                   # Re-ingest all sources (after rule changes)
+\`\`\`
+
+Advanced commands (watch, sync, ui, review, etc.): \`docuflow advanced --help\`
+
+## MCP Tools — Core (4 tools)
+
+Use these when an agent needs to interact with the wiki directly:
+
+- **ingest_source** — Ingest a markdown file from \`.docuflow/sources/\` and generate wiki pages (entities, concepts).
+- **query_wiki** — One-stop Q&A: searches wiki, synthesises an answer, returns source citations.
+  - Example: \`query_wiki({ project_path: "${projectDir}", question: "How does authentication work?" })\`
+- **lint_wiki** — Health check: orphan pages, broken refs, stale content, metadata gaps. Returns a 0–100 health score.
+- **get_schema_guidance** — Analyse what wiki pages should exist based on the schema and current state.
+
+## MCP Tools — All 15 Tools
+
+### Codebase Scanner Tools
 
 - **read_module** — Analyse a single source file. Returns language, classes, functions, dependencies, DB tables, endpoints, config refs, and raw content (first 8 KB).
   - Example: \`read_module({ path: "src/UserService.cs" })\`
@@ -110,7 +136,7 @@ It is registered in your Claude Desktop config and available as MCP tools in eve
 - **read_specs** — Read previously written specs, optionally filtered by name.
   - Example: \`read_specs({ project_path: "${projectDir}" })\`
 
-## Wiki Pipeline Tools
+### Wiki Pipeline Tools
 
 - **ingest_source** — Ingest a markdown file from \`.docuflow/sources/\` and generate wiki pages (entities, concepts).
 - **update_index** — Rebuild \`.docuflow/index.md\` from all wiki pages.
@@ -120,13 +146,23 @@ It is registered in your Claude Desktop config and available as MCP tools in eve
 - **synthesize_answer** — Generate a markdown synthesis from a list of specific wiki page IDs.
 - **save_answer_as_page** — Persist a synthesised answer back into the wiki (knowledge compounding).
 
-## Health & Guidance Tools
+### Health & Guidance Tools
 
 - **lint_wiki** — Health check: orphan pages, broken refs, stale content, metadata gaps. Returns a 0–100 health score.
 - **get_schema_guidance** — Analyse what wiki pages should exist based on the schema and current state.
 - **preview_generation** — Preview what a tool will do before running it.
 
 ## Common Workflows
+
+### Query the wiki (headline workflow)
+\`\`\`
+docuflow query "How does authentication work?"
+# → answer with citations in your terminal
+
+# Or via MCP tool:
+query_wiki({ project_path: "${projectDir}", question: "How does authentication work?" })
+→ save_answer_as_page if the answer is worth keeping
+\`\`\`
 
 ### First time — understand the codebase
 \`\`\`
@@ -135,14 +171,9 @@ list_modules({ path: "${projectDir}" })
 → write_spec each important module
 \`\`\`
 
-### Ongoing — answer a question
-\`\`\`
-query_wiki({ project_path: "${projectDir}", question: "How does authentication work?" })
-→ save_answer_as_page if the answer is worth keeping
-\`\`\`
-
 ### Maintenance — check wiki health
 \`\`\`
+docuflow status                          # health score + counts
 lint_wiki({ project_path: "${projectDir}" })
 → fix orphans and broken refs
 \`\`\`

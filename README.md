@@ -173,18 +173,25 @@ The MCP server. Exposes 15 tools over stdio transport.
 
 Command-line interface for Docuflow.
 
-**Commands:**
-- `docuflow query "<question>"` — Ask the wiki, get an answer with citations (core value-out pipe)
-- `docuflow query "<question>" --max-sources 5` — Limit citation sources (default: 5)
-- `docuflow query "<question>" --json` — Machine-readable JSON output
-- `docuflow query "<question>" --no-cite` — Answer only, no citation section
-- `docuflow query "<question>" --save-as "<title>"` — Persist answer as a wiki page
+**Core Commands:**
 - `docuflow init` — Create `.docuflow/` structure, generate CLAUDE.md, setup schema template
 - `docuflow init --interactive` / `docuflow init -i` — Interactive domain-aware setup (Code/Research/Business/Personal)
-- `docuflow status` — Show wiki page counts by category, source count, CLAUDE.md presence, version, last ingest date
+- `docuflow status` — Show wiki health and counts
 - `docuflow ingest <source.md>` — Ingest a single source file from `.docuflow/sources/` into the wiki
 - `docuflow ingest --all` — Ingest all source files in `.docuflow/sources/`
-- `docuflow suggest` — Domain-aware first-steps guidance: 5 prioritised wiki page suggestions + ready-to-paste Claude prompts
+- `docuflow query "<question>"` — Ask the wiki — returns an answer with citations
+- `docuflow rewiki` — Migrate / re-ingest all sources with current extractor rules
+
+**Advanced Commands** (existing scripts continue to work unchanged):
+- `docuflow watch` — Auto-sync daemon
+- `docuflow sync [--ai]` — One-shot sync for CI / git hooks
+- `docuflow ui [--port N]` — Launch web UI dashboard
+- `docuflow review` — Review uncommitted changes
+- `docuflow recent` — Recent work dashboard
+- `docuflow suggest` — First-steps guidance
+- `docuflow update` — Self-upgrade DocuFlow
+
+Run `docuflow advanced --help` for the full advanced command list.
 
 **Interactive Init Features:**
 - Domain selection (4 options)
@@ -392,26 +399,11 @@ docuflow watch stop                   # Stop daemon
 - Git post-commit hook runs `docuflow sync --ai` after commits
 - Non-blocking (runs in background)
 
-**Query the wiki:**
-```bash
-docuflow query "How does the rewiki migration work?"        # ask a question, get citations
-docuflow query "..." --json | jq .answer                    # machine-readable output
-docuflow query "..." --no-cite                              # answer only
-docuflow query "..." --save-as "rewiki-flow"                # persist as a wiki page
-```
-
 **Re-ingest with updated rules (migration):**
 ```bash
 docuflow rewiki --dry-run   # preview cleanup (no writes)
 docuflow rewiki             # apply — backs up wiki first
 docuflow rewiki --no-backup # skip backup (faster, irreversible)
-```
-
-**Ingest a source file:**
-```bash
-docuflow ingest overview.md           # ingest a single file from .docuflow/sources/
-docuflow ingest --all                 # ingest all source files
-docuflow ingest overview.md --quiet   # silent mode for CI
 ```
 
 See [`LOCAL_SYNC_SETUP.md`](./LOCAL_SYNC_SETUP.md) for full workflow guide.
