@@ -155,12 +155,33 @@ else
   check "docuflow watch stop (no daemon) exits 0 gracefully" "fail"
 fi
 
+# Core help check (v1.7 core/advanced split — top-level shows core only)
 HELP=$(node packages/cli/dist/index.js 2>&1)
-for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "review --ai" "review --fail-on-critical" "--copilot" "--claude" "ui --port" "Alias for" "update --check" "update --force"; do
+for cmd in "init" "ingest" "query" "status" "rewiki" "ADVANCED"; do
   echo "$HELP" | grep -qe "$cmd" \
-    && check "help contains: $cmd" "pass" \
-    || check "help contains: $cmd" "fail"
+    && check "core help contains: $cmd" "pass" \
+    || check "core help contains: $cmd" "fail"
 done
+
+# Advanced help check — full advanced surface visible under `advanced --help`
+ADV_HELP=$(node packages/cli/dist/index.js advanced --help 2>&1)
+for cmd in "watch" "sync" "ui" "review" "recent" "suggest" "update" "Alias for"; do
+  echo "$ADV_HELP" | grep -qe "$cmd" \
+    && check "advanced help contains: $cmd" "pass" \
+    || check "advanced help contains: $cmd" "fail"
+done
+
+# Bright line — every old top-level command path still works
+if node packages/cli/dist/index.js watch status 2>/dev/null | grep -q "stopped\|running"; then
+  check "bare-form 'watch status' still works (bright line)" "pass"
+else
+  check "bare-form 'watch status' still works (bright line)" "fail"
+fi
+if node packages/cli/dist/index.js advanced watch status 2>/dev/null | grep -q "stopped\|running"; then
+  check "'advanced watch status' also works" "pass"
+else
+  check "'advanced watch status' also works" "fail"
+fi
 
 # review behavioral checks (required acceptance scenarios)
 echo ""
