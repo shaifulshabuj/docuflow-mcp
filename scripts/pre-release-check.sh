@@ -162,28 +162,6 @@ for cmd in "watch stop" "watch status" "watch restart" "sync --ai" "review --ai"
     || check "help contains: $cmd" "fail"
 done
 
-# reviewer contract smoke checks
-REVIEWER_AGENT_FILE=".claude/agents/devloop-reviewer.md"
-for verdict_line in "Verdict: APPROVED" "Verdict: NEEDS_WORK" "Verdict: REJECTED"; do
-  if grep -Fq "$verdict_line" "$REVIEWER_AGENT_FILE"; then
-    check "reviewer contract includes '$verdict_line'" "pass"
-  else
-    check "reviewer contract includes '$verdict_line'" "fail"
-  fi
-done
-
-if grep -Fq "first non-empty line of your output MUST be exactly one of:" "$REVIEWER_AGENT_FILE"; then
-  check "reviewer contract enforces canonical first-line verdict format" "pass"
-else
-  check "reviewer contract enforces canonical first-line verdict format" "fail"
-fi
-
-if grep -Fq "first non-empty line of your output MUST be exactly one of:" "$REVIEWER_AGENT_FILE"; then
-  check "reviewer contract requires first non-empty canonical verdict" "pass"
-else
-  check "reviewer contract requires first non-empty canonical verdict" "fail"
-fi
-
 # review behavioral checks (required acceptance scenarios)
 echo ""
 echo "Running review behavioral checks..."

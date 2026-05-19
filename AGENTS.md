@@ -64,14 +64,8 @@ Setup:
 **MCP registration**: Pi does not support project-level MCP config files.
 **Instructions**: `AGENTS.md` (this file) + passed via `pi --context AGENTS.md "prompt"`
 
-Pi is a worker-only agent invoked by DevLoop as:
-```bash
-pi --mode json "$prompt"
-```
-
-Pi cannot call DocuFlow or Waymark MCP tools directly. DevLoop's orchestrator
-pre-fetches relevant wiki context via DocuFlow and injects it into the Pi prompt.
-Waymark policy is enforced at the DevLoop level (not inside the Pi session).
+Pi can be invoked directly with relevant context injected into the prompt. DocuFlow wiki context
+should be pre-fetched and included in the Pi prompt. Waymark policy must be enforced externally.
 
 ---
 
