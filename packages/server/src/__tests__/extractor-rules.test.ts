@@ -162,4 +162,142 @@ describe("passesEntityRules", () => {
       });
     }
   });
+
+  // ── Rule 1 — multi-word all-stop-list rejection ────────────────────────────
+
+  describe("Rule 1 — multi-word stop-list", () => {
+    it("rejects 'key components' (both words generic)", () => {
+      const c = ok({ name: "Key Components", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/stop-list/);
+    });
+
+    it("rejects 'core modules'", () => {
+      const c = ok({ name: "Core Modules", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects 'getting started' (whole-phrase stop-list)", () => {
+      const c = ok({ name: "Getting Started", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("accepts 'Claude Desktop' (one word not on stop-list)", () => {
+      const c = ok({ name: "Claude Desktop", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(true);
+    });
+  });
+
+  // ── Rule 6 — section-heading noise ─────────────────────────────────────────
+
+  describe("Rule 6 — section-heading noise patterns", () => {
+    it("rejects numbered list items", () => {
+      const c = ok({ name: "1. Documentation Goes Stale", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/numbered list/);
+    });
+
+    it("rejects '2) Foo Bar'", () => {
+      const c = ok({ name: "2) Foo Bar", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects file references ending in .md", () => {
+      const c = ok({ name: "synthesis_architecture_overview.md", source: "bold", context: "See synthesis_architecture_overview.md for a deeper dive into the topic and trade-offs." });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/file reference/);
+    });
+
+    it("rejects file references ending in .ts", () => {
+      const c = ok({ name: "extractor.ts", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects question-form headings", () => {
+      const c = ok({ name: "What is DocuFlow", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/question/);
+    });
+
+    it("rejects 'How it works'", () => {
+      const c = ok({ name: "How it works", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects preposition-led phrases", () => {
+      const c = ok({ name: "For Using DocuFlow", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/preposition/);
+    });
+
+    it("rejects layer/phase markers", () => {
+      const c = ok({ name: "Layer 1: Raw Sources", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/layer\/phase/);
+    });
+
+    it("rejects 'Phase 2 Testing'", () => {
+      const c = ok({ name: "Phase 2 Testing", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects sentence-form 'DocuFlow is not a documentation generator'", () => {
+      const c = ok({ name: "DocuFlow is not a documentation generator", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/sentence/);
+    });
+
+    it("accepts a real heading entity like 'MCP Server'", () => {
+      const c = ok({ name: "MCP Server", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(true);
+    });
+
+    it("rejects emoji-led titles like '🔧 .devloop/ Storage'", () => {
+      const c = ok({ name: "🔧 .devloop/ Storage", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/emoji|punctuation/);
+    });
+
+    it("rejects '❌ Hiding the knowledge base from humans'", () => {
+      const c = ok({ name: "❌ Hiding the knowledge base from humans", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects 'The Core Thesis' (the-X descriptive)", () => {
+      const c = ok({ name: "The Core Thesis", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/descriptive reference/);
+    });
+
+    it("rejects 'The LLM Wiki Pattern' (the-X descriptive)", () => {
+      const c = ok({ name: "The LLM Wiki Pattern", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("rejects 'Date: 2026-04-27' (date metadata)", () => {
+      const c = ok({ name: "Date: 2026-04-27", source: "heading" });
+      const r = passesEntityRules(c);
+      expect(r.ok).toBe(false);
+      expect((r as any).reason).toMatch(/date/);
+    });
+
+    it("rejects bare ISO date '2026-04-27'", () => {
+      const c = ok({ name: "2026-04-27", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(false);
+    });
+
+    it("accepts version strings like 'v1.5.2' (not a date)", () => {
+      const c = ok({ name: "v1.5.2", source: "heading" });
+      expect(passesEntityRules(c).ok).toBe(true);
+    });
+  });
 });
