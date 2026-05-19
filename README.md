@@ -182,6 +182,8 @@ Command-line interface for Docuflow.
 - `docuflow init` — Create `.docuflow/` structure, generate CLAUDE.md, setup schema template
 - `docuflow init --interactive` / `docuflow init -i` — Interactive domain-aware setup (Code/Research/Business/Personal)
 - `docuflow status` — Show wiki page counts by category, source count, CLAUDE.md presence, version, last ingest date
+- `docuflow ingest <source.md>` — Ingest a single source file from `.docuflow/sources/` into the wiki
+- `docuflow ingest --all` — Ingest all source files in `.docuflow/sources/`
 - `docuflow suggest` — Domain-aware first-steps guidance: 5 prioritised wiki page suggestions + ready-to-paste Claude prompts
 
 **Interactive Init Features:**
@@ -403,6 +405,13 @@ docuflow query "..." --save-as "rewiki-flow"                # persist as a wiki 
 docuflow rewiki --dry-run   # preview cleanup (no writes)
 docuflow rewiki             # apply — backs up wiki first
 docuflow rewiki --no-backup # skip backup (faster, irreversible)
+```
+
+**Ingest a source file:**
+```bash
+docuflow ingest overview.md           # ingest a single file from .docuflow/sources/
+docuflow ingest --all                 # ingest all source files
+docuflow ingest overview.md --quiet   # silent mode for CI
 ```
 
 See [`LOCAL_SYNC_SETUP.md`](./LOCAL_SYNC_SETUP.md) for full workflow guide.

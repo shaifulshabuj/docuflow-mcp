@@ -40,6 +40,18 @@ if (cmd === '--version' || cmd === '-v') {
     })
   );
 
+// ── ingest — ingest a source file into the wiki ──────────────────────────────
+} else if (cmd === 'ingest') {
+  const sourceFile = rest[0] && !rest[0].startsWith('--') ? rest[0] : undefined;
+  import('./commands/ingest').then(m =>
+    m.run({
+      sourceFile,
+      all:    hasFlag('--all'),
+      dryRun: hasFlag('--dry-run'),
+      quiet:  hasFlag('--quiet', '-q'),
+    })
+  );
+
 } else if (cmd === 'suggest') {
   import('./commands/suggest').then(m => m.run());
 
@@ -153,6 +165,10 @@ if (cmd === '--version' || cmd === '-v') {
   console.log('  init                    Register DocuFlow MCP and generate CLAUDE.md');
   console.log('  init --interactive      Interactive setup wizard');
   console.log('  status                  Show wiki health, page counts, and MCP status');
+  console.log('  ingest <source.md>      Ingest a source file from .docuflow/sources/ into the wiki');
+  console.log('  ingest --all            Ingest all source files in .docuflow/sources/');
+  console.log('  ingest --dry-run        Preview (redirects to `docuflow rewiki --dry-run`)');
+  console.log('  ingest --quiet          Suppress output (CI mode)');
   console.log('  suggest                 Show what to document first (domain-specific)');
   console.log('  ui                      Start the DocuFlow web interface (API + UI on port 48821)');
   console.log('  start                   Alias for "ui" — same web interface');
