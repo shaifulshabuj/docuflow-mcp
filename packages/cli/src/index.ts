@@ -24,6 +24,22 @@ if (cmd === '--version' || cmd === '-v') {
   }
 } else if (cmd === 'status') {
   import('./commands/status').then(m => m.run());
+
+// ── query — ask the wiki ──────────────────────────────────────────────────────
+} else if (cmd === 'query') {
+  const question = rest[0] ?? '';
+  const maxSourcesFlag = getFlagValue('--max-sources');
+  import('./commands/query').then(m =>
+    m.run({
+      question,
+      maxSources: maxSourcesFlag ? parseInt(maxSourcesFlag, 10) : 5,
+      json:       hasFlag('--json'),
+      noCite:     hasFlag('--no-cite'),
+      saveAs:     getFlagValue('--save-as'),
+      quiet:      hasFlag('--quiet', '-q'),
+    })
+  );
+
 } else if (cmd === 'suggest') {
   import('./commands/suggest').then(m => m.run());
 

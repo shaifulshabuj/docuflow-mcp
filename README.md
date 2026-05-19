@@ -174,6 +174,11 @@ The MCP server. Exposes 15 tools over stdio transport.
 Command-line interface for Docuflow.
 
 **Commands:**
+- `docuflow query "<question>"` — Ask the wiki, get an answer with citations (core value-out pipe)
+- `docuflow query "<question>" --max-sources 5` — Limit citation sources (default: 5)
+- `docuflow query "<question>" --json` — Machine-readable JSON output
+- `docuflow query "<question>" --no-cite` — Answer only, no citation section
+- `docuflow query "<question>" --save-as "<title>"` — Persist answer as a wiki page
 - `docuflow init` — Create `.docuflow/` structure, generate CLAUDE.md, setup schema template
 - `docuflow init --interactive` / `docuflow init -i` — Interactive domain-aware setup (Code/Research/Business/Personal)
 - `docuflow status` — Show wiki page counts by category, source count, CLAUDE.md presence, version, last ingest date
@@ -384,6 +389,14 @@ docuflow watch stop                   # Stop daemon
 **Auto-sync on every commit** (enabled by default):
 - Git post-commit hook runs `docuflow sync --ai` after commits
 - Non-blocking (runs in background)
+
+**Query the wiki:**
+```bash
+docuflow query "How does the rewiki migration work?"        # ask a question, get citations
+docuflow query "..." --json | jq .answer                    # machine-readable output
+docuflow query "..." --no-cite                              # answer only
+docuflow query "..." --save-as "rewiki-flow"                # persist as a wiki page
+```
 
 **Re-ingest with updated rules (migration):**
 ```bash
