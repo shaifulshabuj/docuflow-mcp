@@ -5,6 +5,8 @@ https://github.com/user-attachments/assets/e8e75f1e-9fcb-48ab-ae9d-29b14dea2212
 Private development repository for the Docuflow MCP server.
 Public releases live at [github.com/doquflows/docuflow](https://github.com/doquflows/docuflow).
 
+> Migrating from v1.5? See [MIGRATION.md](MIGRATION.md).
+
 ## npm Downloads
 
 [![npm downloads @doquflow/cli](https://img.shields.io/npm/dm/@doquflow/cli?label=%40doquflow%2Fcli&style=flat-square&color=6366f1)](https://www.npmjs.com/package/@doquflow/cli)
