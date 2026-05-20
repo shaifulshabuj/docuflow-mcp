@@ -41,7 +41,11 @@ function loadServerTool(toolFile: string): any {
     () => require(`@doquflow/core/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../core/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../core/dist/tools", toolFile)),
-    // 11 advanced tools (and back-compat) — @doquflow/server
+    // v2.0 — 11 advanced tools live in @doquflow/studio
+    () => require(`@doquflow/studio/dist/tools/${toolFile}`),
+    () => require(path.resolve(__dirname, "../../../studio/dist/tools", toolFile)),
+    () => require(path.resolve(__dirname, "../../studio/dist/tools", toolFile)),
+    // v1.x back-compat — server may still have a tools/ dir on older installs
     () => require(`@doquflow/server/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),
