@@ -45,10 +45,6 @@ function loadServerTool(toolFile: string): any {
     () => require(`@doquflow/studio/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../studio/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../studio/dist/tools", toolFile)),
-    // v1.x back-compat — server may still have a tools/ dir on older installs
-    () => require(`@doquflow/server/dist/tools/${toolFile}`),
-    () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
-    () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),
   ];
   for (const attempt of candidates) {
     try { return attempt(); } catch {}
@@ -145,9 +141,9 @@ function runClaudeSync(prompt: string, projectPath: string, allowDangerousPermis
   // Build the MCP config pointing to the local server binary
   let serverBin: string;
   try {
-    serverBin = require.resolve("@doquflow/server/dist/index.js");
+    serverBin = require.resolve("@doquflow/studio/dist/mcp/index.js");
   } catch {
-    serverBin = path.resolve(__dirname, "../../server/dist/index.js");
+    serverBin = path.resolve(__dirname, "../../studio/dist/mcp/index.js");
   }
   const mcpConfig = JSON.stringify({
     mcpServers: {

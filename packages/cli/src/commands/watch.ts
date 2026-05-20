@@ -49,9 +49,6 @@ function loadServerTool(toolFile: string): any {
     () => require(`@doquflow/studio/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../studio/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../studio/dist/tools", toolFile)),
-    () => require(`@doquflow/server/dist/tools/${toolFile}`),
-    () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
-    () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),
   ];
   for (const attempt of candidates) {
     try { return attempt(); } catch {}
@@ -218,9 +215,9 @@ let _allowDangerousPermissions = false;
 function runClaudeCLI(prompt: string, timeoutMs = 120_000): string | null {
   let serverBin: string;
   try {
-    serverBin = require.resolve("@doquflow/server/dist/index.js");
+    serverBin = require.resolve("@doquflow/studio/dist/mcp/index.js");
   } catch {
-    serverBin = path.resolve(__dirname, "../../server/dist/index.js");
+    serverBin = path.resolve(__dirname, "../../studio/dist/mcp/index.js");
   }
   const mcpConfig = JSON.stringify({
     mcpServers: { docuflow: { type: "stdio", command: process.execPath, args: [serverBin] } }

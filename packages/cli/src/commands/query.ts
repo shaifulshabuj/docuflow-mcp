@@ -39,9 +39,6 @@ function loadServerTool(toolFile: string): any {
     () => require(`@doquflow/studio/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../studio/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../studio/dist/tools", toolFile)),
-    () => require(`@doquflow/server/dist/tools/${toolFile}`),
-    () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
-    () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),
   ];
   for (const attempt of candidates) {
     try { return attempt(); } catch {}

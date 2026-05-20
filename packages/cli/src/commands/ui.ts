@@ -27,14 +27,14 @@ import {
 } from './watch';
 
 // ── Tool loader ───────────────────────────────────────────────────────────────
-// Server tools live in @doquflow/server/dist/tools/<name>.js (CommonJS).
+// Studio tools live in @doquflow/studio/dist/tools/<name>.js (CommonJS).
 // We load them at runtime to keep TypeScript declarations clean.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ToolFn = (args: Record<string, any>) => Promise<any>;
 
 function loadTool(file: string, exportName: string): ToolFn {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require(`@doquflow/server/dist/tools/${file}`) as Record<string, ToolFn>)[exportName];
+  return (require(`@doquflow/studio/dist/tools/${file}`) as Record<string, ToolFn>)[exportName];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
