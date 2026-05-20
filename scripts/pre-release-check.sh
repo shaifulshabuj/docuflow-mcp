@@ -286,9 +286,12 @@ fi
 
 echo ""
 echo "Checking MCP tool count..."
-TOOL_COUNT=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+TOOL_COUNT_RAW=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
   | node packages/server/dist/index.js 2>/dev/null \
   | node -e "try{const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));console.log(d.result.tools.length)}catch(e){console.log(0)}")
+# Strip ANSI color codes that may leak from the server's stdout banner
+TOOL_COUNT=$(echo "$TOOL_COUNT_RAW" | sed -E 's/\x1b\[[0-9;]*m//g' | tr -cd '0-9')
+[ -z "$TOOL_COUNT" ] && TOOL_COUNT=0
 [ "$TOOL_COUNT" -ge 15 ] \
   && check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "pass" \
   || check "MCP server registers ≥15 tools (found $TOOL_COUNT)" "fail"

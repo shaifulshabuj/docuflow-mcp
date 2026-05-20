@@ -43,6 +43,9 @@ import os from "node:os";
 // ─── Dynamic server tool loader ────────────────────────────────────────────────
 function loadServerTool(toolFile: string): any {
   const candidates = [
+    () => require(`@doquflow/core/dist/tools/${toolFile}`),
+    () => require(path.resolve(__dirname, "../../../core/dist/tools", toolFile)),
+    () => require(path.resolve(__dirname, "../../core/dist/tools", toolFile)),
     () => require(`@doquflow/server/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),
