@@ -46,23 +46,55 @@ Tightened the entity extractor with six rules (stop-list, no emoji/punct slugs, 
 
 Re-running `docuflow init` on a project with an existing CLAUDE.md is now idempotent: the generator replaces only the content between `<!-- BEGIN DOCUFLOW -->` / `<!-- END DOCUFLOW -->` markers, leaving surrounding content untouched.
 
-## What's coming in v2.0 (package split)
+## What changed in v2.0 (package split — this milestone)
 
-`@doquflow/core` (irreducible MCP server) and `@doquflow/studio` (UI, REST API, daemons). `@doquflow/cli` stays as a meta-package depending on both — the existing install path (`npm install -g @doquflow/cli`) is unchanged. The split makes it possible to deploy a lean server-only instance without pulling in the full operational surface.
+The single `@doquflow/server` package has been split into four focused packages. **Existing installs require no changes.**
+
+| Package | Role | MCP tools |
+|---------|------|-----------|
+| `@doquflow/core` | Irreducible MCP server — 4 core tools | `query_wiki`, `ingest_source`, `wiki_search`, `read_module` |
+| `@doquflow/studio` | 11 advanced tools + UI + REST API + MCP binary | `lint_wiki`, `list_wiki`, `write_spec`, `read_specs`, `save_answer_as_page`, `synthesize_answer`, `update_index`, `get_schema_guidance`, `preview_generation`, `generate_dependency_graph`, `list_modules` |
+| `@doquflow/server` | Back-compat shim — re-exports studio | All 15 (via studio) |
+| `@doquflow/cli` | Meta-package CLI — depends on core + studio | — |
+
+### The bright line holds through v2.x
+
+Every existing install command, CLI invocation, MCP registration, and `.mcp.json` entry continues to work without any user action:
+
+```bash
+# still works — server is now a thin shim of studio
+npx @doquflow/server
+npm install -g @doquflow/cli   # installs core + studio transitively
+```
+
+Existing `.mcp.json` files pointing at `@doquflow/server` continue to work. `docuflow init` now writes registrations pointing at the canonical `@doquflow/studio/dist/mcp/index.js` path.
+
+### New in v2.0: `docuflow doctor`
+
+```
+docuflow doctor             # human-readable report
+docuflow doctor --json      # machine-readable JSON
+docuflow doctor --quiet     # recommendations only
+```
+
+Diagnoses installed packages, MCP server registrations (.mcp.json / Claude Desktop / VS Code / Copilot CLI), workflow status, and wiki health — with actionable 🔴/🟡/🟢 recommendations.
+
+### Package mapping
+
+```bash
+# To use only the 4 core MCP tools (smallest install):
+npm install -g @doquflow/core
+
+# To use all 15 tools + UI + REST API:
+npm install -g @doquflow/studio
+
+# To use the full CLI (recommended — installs everything):
+npm install -g @doquflow/cli
+```
 
 ## What's coming in v3.0 (evidence-based pruning)
 
 If studio features show real usage, they earned their keep. If not, they retire. No decisions will be made before there's evidence.
-
-## The "no" list until v2.0
-
-Every PR has to answer the question above in one sentence. Until v2.0:
-
-- ❌ No new MCP tools
-- ❌ No new CLI subcommands
-- ❌ No new UI views
-- ❌ No new integrations
-- ✅ Extractor precision, schema authoring UX, query-result quality, value-out docs
 
 ## Questions?
 
