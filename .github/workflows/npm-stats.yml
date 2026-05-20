@@ -5,6 +5,7 @@ on:
     - cron: '0 9 * * 1'    # weekly — Mondays at 09:00 UTC
   workflow_dispatch:          # allow manual trigger from GitHub UI
   push:
+    branches: [main]          # tag pushes excluded — commit-on-detached-HEAD fails
     paths:
       - 'scripts/generate-npm-chart.js'   # re-run when chart script changes
 

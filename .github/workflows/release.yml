@@ -57,15 +57,60 @@ jobs:
           git push origin main
           git push origin ${{ github.ref_name }}
 
-      - name: Publish @doquflow/cli
-        run: npm publish --access public
-        working-directory: packages/cli
+      # ── npm publish — topological order ────────────────────────────────────
+      # Order matters: cli/server reference core + studio in their deps.
+      #   core    (no internal deps)
+      #   studio  → depends on core
+      #   server  → shim, depends on studio
+      #   cli     → meta-package, depends on core + studio
+      # Each step skips silently if the version is already published
+      # (idempotent re-runs on a retry).
+
+      - name: Publish @doquflow/core
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if npm view "@doquflow/core@$VER" version >/dev/null 2>&1; then
+            echo "@doquflow/core@$VER already published — skipping."
+          else
+            npm publish --access public
+          fi
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @doquflow/studio
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if npm view "@doquflow/studio@$VER" version >/dev/null 2>&1; then
+            echo "@doquflow/studio@$VER already published — skipping."
+          else
+            npm publish --access public
+          fi
+        working-directory: packages/studio
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @doquflow/server
-        run: npm publish --access public
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if npm view "@doquflow/server@$VER" version >/dev/null 2>&1; then
+            echo "@doquflow/server@$VER already published — skipping."
+          else
+            npm publish --access public
+          fi
         working-directory: packages/server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @doquflow/cli
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          if npm view "@doquflow/cli@$VER" version >/dev/null 2>&1; then
+            echo "@doquflow/cli@$VER already published — skipping."
+          else
+            npm publish --access public
+          fi
+        working-directory: packages/cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
