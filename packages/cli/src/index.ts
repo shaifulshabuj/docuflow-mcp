@@ -78,6 +78,15 @@ function dispatch(c: string | undefined, r: string[]): void {
       })
     );
 
+  // ── doctor — diagnose install, MCP registration, and wiki health ──────────
+  } else if (c === 'doctor') {
+    import('./commands/doctor').then(m =>
+      m.run({
+        json:  hasFlagIn(r, '--json'),
+        quiet: hasFlagIn(r, '--quiet', '-q'),
+      })
+    );
+
   // ── ADVANCED ──────────────────────────────────────────────────────────────
 
   } else if (c === 'suggest') {

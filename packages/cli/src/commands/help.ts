@@ -10,6 +10,7 @@ export function printCoreHelp(): void {
   console.log('  docuflow query "<question>"           Ask the wiki — answer with citations');
   console.log('  docuflow status                       Show wiki health and counts');
   console.log('  docuflow rewiki                       Migrate / re-ingest with current rules');
+  console.log('  docuflow doctor                       Diagnose install, MCP registration, and wiki health');
   console.log('');
   console.log('ADVANCED');
   console.log('  docuflow advanced --help              See watch / sync / ui / review / recent / suggest / update');
