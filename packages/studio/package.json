@@ -30,11 +30,15 @@
     "./lib": {
       "require": "./dist/lib.js",
       "types": "./dist/lib.d.ts"
+    },
+    "./mcp": {
+      "require": "./dist/mcp/index.js"
     }
   },
   "typesVersions": {
     "*": {
-      "lib": ["./dist/lib.d.ts"]
+      "lib": ["./dist/lib.d.ts"],
+      "mcp": ["./dist/mcp/index.d.ts"]
     }
   },
   "bin": {
