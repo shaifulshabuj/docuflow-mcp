@@ -1,5 +1,25 @@
 # Docuflow Changelog
 
+## [2.0.0] - 2026-05-20
+
+**Package split.** Third milestone of the philosophy reset. `@doquflow/server` becomes a thin back-compat alias; the value pipe lives in new packages `@doquflow/core` (4 MCP tools, minimal) and `@doquflow/studio` (11 advanced tools + UI + REST API). `@doquflow/cli` is now a meta-package depending on both. See [release/v2.0.0.md](release/v2.0.0.md) for the full narrative.
+
+### Added
+- feat: `@doquflow/core` package (#28) — irreducible MCP server with the 4 core tools (`query_wiki`, `ingest_source`, `wiki_search`, `read_module`), the extractor, types, filesystem helpers, and 49 unit tests
+- feat: `@doquflow/studio` package (#29) — 11 advanced MCP tools, React web UI, Express REST API; depends on `@doquflow/core`; ships `docuflow-studio` binary registering all 15 tools
+- feat: `docuflow doctor` diagnostic command (#32) — reports installed packages, MCP registrations, workflow detection, recommendations, and wiki health; supports `--json` and `--quiet`
+- docs: `release/v2.0.0.md` — full milestone narrative
+
+### Changed
+- refactor: `@doquflow/server` is now a 7-line shim re-exporting `@doquflow/studio` (#30) — existing `.mcp.json` registrations keep working, 15 tools still served, package size dropped from ~188 KB → < 5 KB
+- refactor: `@doquflow/cli` meta-package (#31) — drops `@doquflow/server` dependency, depends directly on `@doquflow/core` + `@doquflow/studio`; `loadServerTool` fallback chain trimmed; `resolveServerBin()` now targets studio's MCP binary
+- chore: `packages/api` and `packages/ui` removed (content moved into `packages/studio/src/api/` and `packages/studio/src/ui/` in #29)
+- chore: root build script topologically ordered: `core → studio → server → cli`
+- docs: `MIGRATION.md` extended with the v2.0 package layout, install matrix, decision tree, and deprecation timeline
+
+### Bright line
+Zero breakage for existing users. `npm i -g @doquflow/cli` still gives the full surface (transitively pulls `@doquflow/core` + `@doquflow/studio`). Every existing `.mcp.json` registration of `@doquflow/server` continues to work without modification. Every CLI command works at its old path.
+
 ## [1.7.0] - 2026-05-20
 
 **Soft deprecation / core-vs-advanced surface split.** Second milestone of the philosophy reset. Zero command removal — every existing top-level path keeps working. See [release/v1.7.0.md](release/v1.7.0.md) for the full narrative.
