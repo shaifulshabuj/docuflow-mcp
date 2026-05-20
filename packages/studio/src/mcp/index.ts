@@ -6,23 +6,23 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-// 4 core tools — live in @doquflow/core (moved in v2.0 #28)
+// 4 core tools from @doquflow/core
 import { readModule, ingestSource, wikiSearch, queryWiki, synthesizeAnswer } from "@doquflow/core/lib";
 
-// 11 advanced tools — live in @doquflow/studio (moved in v2.0 #29)
-import { listModules } from "@doquflow/studio/lib";
-import { writeSpec } from "@doquflow/studio/lib";
-import { readSpecs } from "@doquflow/studio/lib";
-import { updateIndex } from "@doquflow/studio/lib";
-import { listWiki } from "@doquflow/studio/lib";
-import { saveAnswerAsPage } from "@doquflow/studio/lib";
-import { lintWiki } from "@doquflow/studio/lib";
-import { getSchemataGuidance } from "@doquflow/studio/lib";
-import { previewGeneration } from "@doquflow/studio/lib";
-import { generateDependencyGraph } from "@doquflow/studio/lib";
+// 11 advanced tools (local)
+import { listModules } from "../tools/list-modules";
+import { writeSpec } from "../tools/write-spec";
+import { readSpecs } from "../tools/read-specs";
+import { updateIndex } from "../tools/update-index";
+import { listWiki } from "../tools/list-wiki";
+import { saveAnswerAsPage } from "../tools/save-answer-as-page";
+import { lintWiki } from "../tools/lint-wiki";
+import { getSchemataGuidance } from "../tools/get-schema-guidance";
+import { previewGeneration } from "../tools/preview-generation";
+import { generateDependencyGraph } from "../tools/generate-dependency-graph";
 
 const server = new Server(
-  { name: "docuflow", version: "1.7.0" },
+  { name: "docuflow", version: "2.0.0" },
   { capabilities: { tools: {} } }
 );
 

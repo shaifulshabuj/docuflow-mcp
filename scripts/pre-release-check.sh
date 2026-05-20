@@ -87,41 +87,44 @@ done
   && check "CLI ui-dist/index.html bundled" "pass" \
   || check "CLI ui-dist/index.html bundled" "fail"
 
-# ── 5. Package metadata — all four packages ───────────────────────────────────
+# ── 5. Package metadata — v2.0 four packages (core, studio, server alias, cli) ─
 
 echo ""
 echo "Checking package metadata..."
 
-CLI_NAME=$(node -e "console.log(require('./packages/cli/package.json').name)")
+CORE_NAME=$(node   -e "console.log(require('./packages/core/package.json').name)")
+STUDIO_NAME=$(node -e "console.log(require('./packages/studio/package.json').name)")
 SERVER_NAME=$(node -e "console.log(require('./packages/server/package.json').name)")
-[ "$CLI_NAME"    = "@doquflow/cli"    ] \
-  && check "packages/cli name = @doquflow/cli" "pass" \
-  || check "packages/cli name = @doquflow/cli" "fail"
+CLI_NAME=$(node    -e "console.log(require('./packages/cli/package.json').name)")
+[ "$CORE_NAME"   = "@doquflow/core"   ] \
+  && check "packages/core name = @doquflow/core"   "pass" \
+  || check "packages/core name = @doquflow/core"   "fail"
+[ "$STUDIO_NAME" = "@doquflow/studio" ] \
+  && check "packages/studio name = @doquflow/studio" "pass" \
+  || check "packages/studio name = @doquflow/studio" "fail"
 [ "$SERVER_NAME" = "@doquflow/server" ] \
   && check "packages/server name = @doquflow/server" "pass" \
   || check "packages/server name = @doquflow/server" "fail"
+[ "$CLI_NAME"    = "@doquflow/cli"    ] \
+  && check "packages/cli name = @doquflow/cli"    "pass" \
+  || check "packages/cli name = @doquflow/cli"    "fail"
 
-CLI_VER=$(node -e "console.log(require('./packages/cli/package.json').version)")
-SRV_VER=$(node -e "console.log(require('./packages/server/package.json').version)")
-UI_VER=$(node  -e "console.log(require('./packages/ui/package.json').version)")
-API_VER=$(node -e "console.log(require('./packages/api/package.json').version)")
+CORE_VER=$(node   -e "console.log(require('./packages/core/package.json').version)")
+STUDIO_VER=$(node -e "console.log(require('./packages/studio/package.json').version)")
+SRV_VER=$(node    -e "console.log(require('./packages/server/package.json').version)")
+CLI_VER=$(node    -e "console.log(require('./packages/cli/package.json').version)")
+
+[ "$CORE_VER" = "$STUDIO_VER" ] \
+  && check "core and studio versions match ($CORE_VER)" "pass" \
+  || check "core and studio versions match (core=$CORE_VER, studio=$STUDIO_VER)" "fail"
+
+[ "$STUDIO_VER" = "$SRV_VER" ] \
+  && check "studio and server versions match ($STUDIO_VER)" "pass" \
+  || check "studio and server versions match (studio=$STUDIO_VER, srv=$SRV_VER)" "fail"
 
 [ "$CLI_VER" = "$SRV_VER" ] \
-  && check "CLI and server versions match ($CLI_VER)" "pass" \
-  || check "CLI and server versions match (cli=$CLI_VER, srv=$SRV_VER)" "fail"
-
-[ "$UI_VER" = "$SRV_VER" ] \
-  && check "UI version matches server ($UI_VER)" "pass" \
-  || check "UI version matches server (ui=$UI_VER, srv=$SRV_VER)" "fail"
-
-[ "$API_VER" = "$SRV_VER" ] \
-  && check "API version matches server ($API_VER)" "pass" \
-  || check "API version matches server (api=$API_VER, srv=$SRV_VER)" "fail"
-
-CLI_DEP=$(node -e "console.log(require('./packages/cli/package.json').dependencies['@doquflow/server'])")
-[ "$CLI_DEP" = "$SRV_VER" ] \
-  && check "CLI dep @doquflow/server pinned to $SRV_VER" "pass" \
-  || check "CLI dep @doquflow/server pinned to $SRV_VER (got $CLI_DEP)" "fail"
+  && check "cli and server versions match ($CLI_VER)" "pass" \
+  || check "cli and server versions match (cli=$CLI_VER, srv=$SRV_VER)" "fail"
 
 # ── 6. No stale package name ──────────────────────────────────────────────────
 
@@ -312,14 +315,14 @@ echo ""
 echo "Checking UI and API builds..."
 
 # UI: TypeScript strict check
-if node_modules/.bin/tsc --noEmit -p packages/ui/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/studio/tsconfig.json 2>&1 | grep -q "error TS"; then
   check "UI TypeScript strict check (0 errors)" "fail"
 else
   check "UI TypeScript strict check (0 errors)" "pass"
 fi
 
 # UI: production build (vite)
-UI_BUILD_OUT=$(node_modules/.bin/vite build packages/ui 2>&1)
+UI_BUILD_OUT=$(node_modules/.bin/vite build packages/studio 2>&1)
 if echo "$UI_BUILD_OUT" | grep -qE "error|Error|failed"; then
   check "UI production build succeeds (vite build)" "fail"
 else
@@ -327,21 +330,21 @@ else
 fi
 
 # UI: dist/index.html produced
-[ -f "packages/ui/dist/index.html" ] \
+[ -f "packages/studio/ui-dist/index.html" ] \
   && check "UI dist/index.html produced" "pass" \
   || check "UI dist/index.html produced" "fail"
 
 # API: TypeScript strict check
-if node_modules/.bin/tsc --noEmit -p packages/api/tsconfig.json 2>&1 | grep -q "error TS"; then
+if node_modules/.bin/tsc --noEmit -p packages/studio/tsconfig.mcp.json 2>&1 | grep -q "error TS"; then
   check "API TypeScript strict check (0 errors)" "fail"
 else
   check "API TypeScript strict check (0 errors)" "pass"
 fi
 
 # API: source file exists
-[ -f "packages/api/src/index.ts" ] \
-  && check "packages/api/src/index.ts exists" "pass" \
-  || check "packages/api/src/index.ts exists" "fail"
+[ -f "packages/studio/src/api/index.ts" ] \
+  && check "packages/studio/src/api/index.ts exists" "pass" \
+  || check "packages/studio/src/api/index.ts exists" "fail"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
