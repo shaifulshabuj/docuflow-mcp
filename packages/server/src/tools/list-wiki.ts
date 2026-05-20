@@ -1,6 +1,6 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { safeReadFile } from "../filesystem";
+import { safeReadFile } from "@doquflow/core/lib";
 
 const PLURAL_TO_SINGULAR: Record<string, string> = {
   entities: "entity",

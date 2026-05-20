@@ -1,7 +1,7 @@
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { readJsonIfExists } from "../filesystem";
-import type { WikiPage } from "../types";
+import { readJsonIfExists } from "@doquflow/core/lib";
+import type { WikiPage } from "@doquflow/core/lib";
 
 interface SchemaPart {
   name: string;

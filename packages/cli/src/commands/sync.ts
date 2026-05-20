@@ -37,6 +37,11 @@ const c = {
 // ─── Dynamic server tool loader ────────────────────────────────────────────────
 function loadServerTool(toolFile: string): any {
   const candidates = [
+    // v2.0 — 4 core tools live in @doquflow/core
+    () => require(`@doquflow/core/dist/tools/${toolFile}`),
+    () => require(path.resolve(__dirname, "../../../core/dist/tools", toolFile)),
+    () => require(path.resolve(__dirname, "../../core/dist/tools", toolFile)),
+    // 11 advanced tools (and back-compat) — @doquflow/server
     () => require(`@doquflow/server/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),

@@ -33,6 +33,9 @@ const c = {
 // ─── Dynamic server tool loader (mirrors rewiki.ts pattern) ───────────────────
 function loadServerTool(toolFile: string): any {
   const candidates = [
+    () => require(`@doquflow/core/dist/tools/${toolFile}`),
+    () => require(path.resolve(__dirname, "../../../core/dist/tools", toolFile)),
+    () => require(path.resolve(__dirname, "../../core/dist/tools", toolFile)),
     () => require(`@doquflow/server/dist/tools/${toolFile}`),
     () => require(path.resolve(__dirname, "../../../server/dist/tools", toolFile)),
     () => require(path.resolve(__dirname, "../../server/dist/tools", toolFile)),

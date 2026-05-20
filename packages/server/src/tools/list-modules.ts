@@ -1,8 +1,8 @@
 import path from "node:path";
-import { walk, safeReadFile, SkipEntry } from "../filesystem";
-import { extensionToLanguage } from "../language-map";
-import { extract } from "../extractor";
-import { ListResult, ModuleInfo } from "../types";
+import { walk, safeReadFile, SkipEntry } from "@doquflow/core/lib";
+import { extensionToLanguage } from "@doquflow/core/lib";
+import { extract } from "@doquflow/core/lib";
+import { ListResult, ModuleInfo } from "@doquflow/core/lib";
 
 export async function listModules(input: { path: string; extensions?: string[] }): Promise<ListResult> {
   const projectPath = path.resolve(input.path);
