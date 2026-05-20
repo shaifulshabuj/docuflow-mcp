@@ -76,7 +76,7 @@ export async function run(opts: UpdateOptions = {}): Promise<void> {
   }
 
   console.log(`\n✓ Updated to ${latest}.`);
-  console.log(`  This refreshed the CLI, bundled UI (ui-dist), and the @doquflow/server dependency.`);
+  console.log(`  This refreshed the CLI, bundled UI (ui-dist), and the @doquflow/core + @doquflow/studio dependencies.`);
 
   const stale = await isPortInUse(DEFAULT_PORT);
   if (stale) {

@@ -58,12 +58,12 @@ function getCodexConfigPath(): string {
 }
 
 function resolveServerBin(): string {
-  // Try npm-installed package first
+  // Try npm-installed studio MCP binary first
   try {
-    return require.resolve("@doquflow/server/dist/index.js");
+    return require.resolve("@doquflow/studio/dist/mcp/index.js");
   } catch {
     // Fallback: monorepo sibling path (dev environment)
-    return path.resolve(__dirname, "..", "..", "server", "dist", "index.js");
+    return path.resolve(__dirname, "..", "..", "studio", "dist", "mcp", "index.js");
   }
 }
 
