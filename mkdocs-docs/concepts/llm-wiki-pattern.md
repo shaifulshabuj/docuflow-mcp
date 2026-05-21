@@ -65,14 +65,14 @@ The wiki grows incrementally. Cross-references update automatically. Contradicti
 
 ```mermaid
 graph LR
-    S1[Source 1<br/>design-doc.md] --> W[Wiki<br/>150 pages]
-    S2[Source 2<br/>architecture.md] --> W
-    S3[Source 3<br/>api-spec.md] --> W
-    W --> Q1[Query: "How does auth work?"]
-    Q1 --> A1[Answer + citations]
+    S1["Source 1 · design-doc.md"] --> W["Wiki · 150 pages"]
+    S2["Source 2 · architecture.md"] --> W
+    S3["Source 3 · api-spec.md"] --> W
+    W --> Q1["Query: How does auth work?"]
+    Q1 --> A1["Answer + citations"]
     A1 --> W
-    W --> Q2[Query: "What changed in v2?"]
-    Q2 --> A2[Richer answer — includes auth context from Q1]
+    W --> Q2["Query: What changed in v2?"]
+    Q2 --> A2["Richer answer with compounded context"]
 ```
 
 ## Comparison
