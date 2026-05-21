@@ -1,6 +1,6 @@
 # Copilot Instructions for Docuflow MCP
 
-> **v0.6.0** — 4-package npm monorepo | 15 MCP tools | 8 CLI commands | Web UI on port 48821
+> **v2.0.0** — 4-package npm monorepo | 15 MCP tools | 8 CLI commands | Web UI on port 48821
 
 ---
 
