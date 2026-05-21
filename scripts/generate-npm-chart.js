@@ -2,7 +2,7 @@
 /**
  * generate-npm-chart.js
  *
- * Fetches download stats for @doquflow/cli and @doquflow/server from the npm
+ * Fetches download stats for the @doquflow v2.0 packages from the npm
  * downloads API, then writes a self-contained SVG line chart to docs/stats/npm-downloads.svg.
  *
  * Designed to run inside a GitHub Actions workflow on a schedule.
@@ -13,7 +13,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const PACKAGES = ['@doquflow/cli', '@doquflow/server'];
+const PACKAGES = ['@doquflow/cli', '@doquflow/core', '@doquflow/studio'];
 const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'stats', 'npm-downloads.svg');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -200,8 +200,9 @@ async function main() {
   console.log('📊 Fetching npm download stats...');
 
   const colors = [
-    { color: '#6366f1', fill: '#818cf8' }, // indigo for cli
-    { color: '#10b981', fill: '#34d399' }, // emerald for server
+    { color: '#6366f1', fill: '#818cf8' }, // indigo  — cli
+    { color: '#10b981', fill: '#34d399' }, // emerald — core
+    { color: '#f59e0b', fill: '#fbbf24' }, // amber   — studio
   ];
 
   const datasets = await Promise.all(

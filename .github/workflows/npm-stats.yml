@@ -39,5 +39,6 @@ jobs:
             echo "No changes to chart — skipping commit."
           else
             git commit -m "stats: update npm download chart [skip ci]"
-            git push
+            # Push to main explicitly — handles detached HEAD on tag-triggered runs
+            git push origin HEAD:main
           fi
