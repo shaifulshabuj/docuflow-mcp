@@ -7,6 +7,10 @@ Public releases live at [github.com/doquflows/docuflow](https://github.com/doquf
 
 > Migrating from v1.5? See [MIGRATION.md](MIGRATION.md).
 
+## 📖 Documentation
+
+**[shaifulshabuj.github.io/docuflow-mcp](https://shaifulshabuj.github.io/docuflow-mcp/)** — Full docs site (installation, CLI reference, MCP tools, guides)
+
 ## npm Downloads
 
 [![npm downloads @doquflow/cli](https://img.shields.io/npm/dm/@doquflow/cli?label=%40doquflow%2Fcli&style=flat-square&color=6366f1)](https://www.npmjs.com/package/@doquflow/cli)
