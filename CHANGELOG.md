@@ -1,5 +1,10 @@
 # Docuflow Changelog
 
+## [Unreleased]
+
+### Changed
+- feat: `docuflow init` now runs `suggest` at the end — new users see domain-aware next steps and copy-paste Claude prompts immediately after setup, without needing to discover `docuflow suggest` separately
+
 ## [2.0.0] - 2026-05-20
 
 **Package split.** Third milestone of the philosophy reset. `@doquflow/server` becomes a thin back-compat alias; the value pipe lives in new packages `@doquflow/core` (4 MCP tools, minimal) and `@doquflow/studio` (11 advanced tools + UI + REST API). `@doquflow/cli` is now a meta-package depending on both. See [release/v2.0.0.md](release/v2.0.0.md) for the full narrative.

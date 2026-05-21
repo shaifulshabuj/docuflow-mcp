@@ -2,6 +2,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { run as runSuggest } from "./suggest";
 
 // ── Global project registry ───────────────────────────────────────────────────
 // ~/.docuflow/projects.json  — written by `docuflow init` so the UI can always
@@ -474,6 +475,9 @@ export async function run(): Promise<void> {
   console.log("");
   console.log("  A git post-commit hook was installed at .git/hooks/post-commit");
   console.log("  It runs \"docuflow sync --ai --quiet\" after every commit automatically.");
+  console.log("");
+  console.log("─────────────────────────────────────────────────────");
+  await runSuggest();
 }
 
 /**
