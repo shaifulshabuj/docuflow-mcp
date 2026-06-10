@@ -35,7 +35,7 @@ function dispatch(c: string | undefined, r: string[]): void {
     if (hasFlagIn(r, '--interactive', '-i')) {
       import('./commands/init-interactive').then(m => m.runInteractive());
     } else {
-      import('./commands/init').then(m => m.run());
+      import('./commands/init').then(m => m.run({ repair: hasFlagIn(r, '--repair') }));
     }
 
   } else if (c === 'status') {
@@ -167,8 +167,9 @@ function dispatch(c: string | undefined, r: string[]): void {
   } else if (c === 'update' || c === 'upgrade') {
     import('./commands/update').then(m =>
       m.run({
-        check: hasFlagIn(r, '--check'),
-        force: hasFlagIn(r, '--force'),
+        check:  hasFlagIn(r, '--check'),
+        force:  hasFlagIn(r, '--force'),
+        dryRun: hasFlagIn(r, '--dry-run'),
       })
     );
 

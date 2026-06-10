@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from 'child_process';
 import * as net from 'net';
+import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: currentVersion } = require('../../package.json') as { version: string };
@@ -10,6 +11,7 @@ const DEFAULT_PORT = 48821;
 interface UpdateOptions {
   check?: boolean;
   force?: boolean;
+  dryRun?: boolean;
 }
 
 function fetchLatestVersion(): string {
@@ -68,8 +70,23 @@ export async function run(opts: UpdateOptions = {}): Promise<void> {
     return;
   }
 
-  console.log(`\nInstalling ${PKG}@${latest} globally…`);
-  const result = spawnSync('npm', ['install', '-g', `${PKG}@latest`], { stdio: 'inherit' });
+  // Derive the global prefix from the node binary that is running this CLI.
+  // e.g. /usr/local/bin/node  →  /usr/local
+  // This avoids installing into a different prefix (e.g. .hermes) when multiple
+  // node managers are present on the host.
+  const npmPrefix = path.dirname(path.dirname(process.execPath));
+
+  if (opts.dryRun) {
+    console.log(`\n[dry-run] Would run: npm install -g --prefix ${npmPrefix} ${PKG}@latest`);
+    console.log(`[dry-run] No changes made.`);
+    return;
+  }
+
+  console.log(`\nInstalling ${PKG}@${latest} globally (prefix: ${npmPrefix})…`);
+  const result = spawnSync(
+    'npm', ['install', '-g', '--prefix', npmPrefix, `${PKG}@latest`],
+    { stdio: 'inherit' },
+  );
   if (result.status !== 0) {
     console.error(`✗ npm install failed (exit ${result.status}). Try with sudo if this is a permissions issue.`);
     process.exit(result.status ?? 1);

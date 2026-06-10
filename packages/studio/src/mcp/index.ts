@@ -21,8 +21,11 @@ import { getSchemataGuidance } from "../tools/get-schema-guidance";
 import { previewGeneration } from "../tools/preview-generation";
 import { generateDependencyGraph } from "../tools/generate-dependency-graph";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { version: serverVersion } = require("../../package.json") as { version: string };
+
 const server = new Server(
-  { name: "docuflow", version: "2.0.0" },
+  { name: "docuflow", version: serverVersion },
   { capabilities: { tools: {} } }
 );
 
