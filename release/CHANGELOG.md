@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-06-10
+
 ### Changed
 - feat: `docuflow init` now runs `suggest` at the end — new users see domain-aware next steps and copy-paste Claude prompts immediately after setup, without needing to discover `docuflow suggest` separately
 
