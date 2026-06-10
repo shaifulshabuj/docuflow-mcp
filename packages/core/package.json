@@ -34,7 +34,9 @@
   },
   "typesVersions": {
     "*": {
-      "lib": ["./dist/lib.d.ts"]
+      "lib": [
+        "./dist/lib.d.ts"
+      ]
     }
   },
   "bin": {
@@ -55,5 +57,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "^1.1.0"
   }
 }
