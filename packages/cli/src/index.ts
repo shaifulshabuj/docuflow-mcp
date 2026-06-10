@@ -35,7 +35,7 @@ function dispatch(c: string | undefined, r: string[]): void {
     if (hasFlagIn(r, '--interactive', '-i')) {
       import('./commands/init-interactive').then(m => m.runInteractive());
     } else {
-      import('./commands/init').then(m => m.run());
+      import('./commands/init').then(m => m.run({ repair: hasFlagIn(r, '--repair') }));
     }
 
   } else if (c === 'status') {

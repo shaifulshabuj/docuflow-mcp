@@ -33,7 +33,8 @@
     },
     "./mcp": {
       "require": "./dist/mcp/index.js"
-    }
+    },
+    "./dist/tools/*": "./dist/tools/*.js"
   },
   "typesVersions": {
     "*": {

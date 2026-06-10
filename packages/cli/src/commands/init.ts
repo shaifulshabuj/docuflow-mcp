@@ -59,12 +59,18 @@ function getCodexConfigPath(): string {
 }
 
 function resolveServerBin(): string {
-  // Try npm-installed studio MCP binary first
+  // Use the exports map key — avoids ERR_PACKAGE_PATH_NOT_EXPORTED
   try {
-    return require.resolve("@doquflow/studio/dist/mcp/index.js");
+    return require.resolve("@doquflow/studio/mcp");
   } catch {
-    // Fallback: monorepo sibling path (dev environment)
-    return path.resolve(__dirname, "..", "..", "studio", "dist", "mcp", "index.js");
+    // Fallback 1: studio is a @doquflow sibling inside node_modules
+    // __dirname = .../@doquflow/cli/dist/commands  →  ../../../../@doquflow/studio
+    const sibling = path.resolve(
+      __dirname, "..", "..", "..", "..", "@doquflow", "studio", "dist", "mcp", "index.js"
+    );
+    if (fs.existsSync(sibling)) return sibling;
+    // Fallback 2: monorepo dev — packages/cli/dist/commands → packages/studio
+    return path.resolve(__dirname, "..", "..", "..", "studio", "dist", "mcp", "index.js");
   }
 }
 
@@ -121,13 +127,13 @@ docuflow init                       # initialise .docuflow/ in this project
 
 ### Answer a question
 \`\`\`
-query_wiki({ project_path: "${projectDir}", question: "How does authentication work?" })
+query_wiki({ project_path: ".", question: "How does authentication work?" })
 \`\`\`
 
 ### Add new context
 \`\`\`
 # drop a markdown file in .docuflow/sources/
-ingest_source({ project_path: "${projectDir}", source_filename: "auth-design.md" })
+ingest_source({ project_path: ".", source_filename: "auth-design.md" })
 \`\`\`
 
 ## Advanced tools
@@ -201,11 +207,11 @@ It is registered via \`.codex/config.toml\` and available as MCP tools in every 
 - **read_module** — Analyse a single file: language, classes, functions, dependencies, DB tables, endpoints, config refs, raw content.
   - \`read_module({ path: "src/UserService.cs" })\`
 - **list_modules** — Walk a directory, extract facts for every file. One call to understand the whole project.
-  - \`list_modules({ path: "${projectDir}" })\`
+  - \`list_modules({ path: "." })\`
 - **write_spec** — Save a markdown spec to \`.docuflow/specs/<name>.md\`.
-  - \`write_spec({ project_path: "${projectDir}", filename: "UserService", content: "..." })\`
+  - \`write_spec({ project_path: ".", filename: "UserService", content: "..." })\`
 - **read_specs** — Read saved specs, optionally filtered by name.
-  - \`read_specs({ project_path: "${projectDir}" })\`
+  - \`read_specs({ project_path: "." })\`
 
 ### Wiki Pipeline
 - **ingest_source** — Ingest a markdown file from \`.docuflow/sources/\` into the wiki (entities, concepts).
@@ -213,7 +219,7 @@ It is registered via \`.codex/config.toml\` and available as MCP tools in every 
 - **list_wiki** — List all wiki pages by category (entity/concept/timeline/synthesis).
 - **wiki_search** — BM25 search across all wiki pages.
 - **query_wiki** — Q&A: searches wiki, synthesises an answer, returns citations.
-  - \`query_wiki({ project_path: "${projectDir}", question: "How does auth work?" })\`
+  - \`query_wiki({ project_path: ".", question: "How does auth work?" })\`
 - **synthesize_answer** — Generate a markdown synthesis from a list of page IDs.
 - **save_answer_as_page** — Persist a synthesis as a wiki page.
 
@@ -226,18 +232,18 @@ It is registered via \`.codex/config.toml\` and available as MCP tools in every 
 
 Start here — understand the codebase:
 \`\`\`
-list_modules({ path: "${projectDir}" })
+list_modules({ path: "." })
 → write_spec for important modules
 \`\`\`
 
 Answer a question:
 \`\`\`
-query_wiki({ project_path: "${projectDir}", question: "..." })
+query_wiki({ project_path: ".", question: "..." })
 \`\`\`
 
 Maintain wiki health:
 \`\`\`
-lint_wiki({ project_path: "${projectDir}" })
+lint_wiki({ project_path: "." })
 \`\`\`
 
 ## Storage Layout
@@ -275,6 +281,78 @@ async function writeAgentsMd(projectDir: string): Promise<void> {
   } else {
     await fsp.writeFile(agentsMdPath, newSection, "utf8");
   }
+}
+
+export interface RepairResult {
+  repaired: string[];
+  already_ok: string[];
+  skipped: string[];
+}
+
+/**
+ * Detect and repair broken MCP server paths in Claude Desktop / VS Code / Copilot configs.
+ * A path is "broken" when the config entry exists but the recorded binary path does not.
+ */
+export async function repairMcpConfigs(): Promise<RepairResult> {
+  const serverBin = resolveServerBin();
+  const nodeBin = process.execPath;
+  const repaired: string[] = [];
+  const already_ok: string[] = [];
+  const skipped: string[] = [];
+
+  async function checkAndRepairJson(
+    configPath: string,
+    label: string,
+    getEntry: (cfg: Record<string, unknown>) => { args?: unknown[] } | undefined,
+    writeEntry: (cfg: Record<string, unknown>) => void,
+  ): Promise<void> {
+    try {
+      const raw = await fsp.readFile(configPath, "utf8");
+      const cfg = JSON.parse(raw) as Record<string, unknown>;
+      const entry = getEntry(cfg);
+      if (!entry) { skipped.push(`${label} — no docuflow entry`); return; }
+      const recorded = Array.isArray(entry.args) ? (entry.args[0] as string | undefined) : undefined;
+      if (recorded && fs.existsSync(recorded)) { already_ok.push(label); return; }
+      writeEntry(cfg);
+      await fsp.writeFile(configPath, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+      repaired.push(`${label} (was: ${recorded ?? "missing"} → ${serverBin})`);
+    } catch { skipped.push(`${label} — not found or unreadable`); }
+  }
+
+  // Claude Desktop
+  await checkAndRepairJson(
+    getClaudeDesktopConfigPath(),
+    "Claude Desktop",
+    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => {
+      if (!cfg.mcpServers) cfg.mcpServers = {};
+      (cfg.mcpServers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin] };
+    },
+  );
+
+  // VS Code user MCP
+  await checkAndRepairJson(
+    getVSCodeMcpConfigPath(),
+    "VS Code",
+    (cfg) => ((cfg.servers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => {
+      if (!cfg.servers) cfg.servers = {};
+      (cfg.servers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin], type: "stdio" };
+    },
+  );
+
+  // Copilot CLI
+  await checkAndRepairJson(
+    getCopilotCliMcpConfigPath(),
+    "Copilot CLI",
+    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => {
+      if (!cfg.mcpServers) cfg.mcpServers = {};
+      (cfg.mcpServers as Record<string, unknown>).docuflow = { type: "local", command: nodeBin, args: [serverBin], tools: ["*"] };
+    },
+  );
+
+  return { repaired, already_ok, skipped };
 }
 
 export interface InitResult {
@@ -437,7 +515,24 @@ export async function runInit(projectDir: string): Promise<InitResult> {
   return { ok: true, path: projectDir, details };
 }
 
-export async function run(): Promise<void> {
+export async function runRepair(): Promise<void> {
+  console.log("DocuFlow — repairing MCP config paths…");
+  console.log("");
+  const result = await repairMcpConfigs();
+  for (const r of result.repaired)   console.log(`  ✓ Repaired: ${r}`);
+  for (const r of result.already_ok) console.log(`  ✓ OK:       ${r}`);
+  for (const r of result.skipped)    console.log(`  - Skipped:  ${r}`);
+  if (result.repaired.length === 0 && result.already_ok.length === 0) {
+    console.log("  (no docuflow MCP entries found in any config)");
+  }
+  console.log("");
+  if (result.repaired.length > 0) {
+    console.log("Restart Claude Desktop / reload VS Code to pick up the corrected paths.");
+  }
+}
+
+export async function run(opts: { repair?: boolean } = {}): Promise<void> {
+  if (opts.repair) { return runRepair(); }
   const result = await runInit(process.cwd());
 
   const docuflowDir = path.join(result.path, ".docuflow");
