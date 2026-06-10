@@ -27,14 +27,28 @@ import {
 } from './watch';
 
 // ── Tool loader ───────────────────────────────────────────────────────────────
-// Studio tools live in @doquflow/studio/dist/tools/<name>.js (CommonJS).
-// We load them at runtime to keep TypeScript declarations clean.
+// Core tools (query-wiki, wiki-search, ingest-source) live in @doquflow/core;
+// studio tools (list-wiki, lint-wiki, build-graph, etc.) in @doquflow/studio.
+// We use a core-first fallback chain identical to query.ts:loadServerTool.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ToolFn = (args: Record<string, any>) => Promise<any>;
 
 function loadTool(file: string, exportName: string): ToolFn {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require(`@doquflow/studio/dist/tools/${file}`) as Record<string, ToolFn>)[exportName];
+  const candidates = [
+    () => require(`@doquflow/core/dist/tools/${file}`),
+    () => require(path.resolve(__dirname, '../../../core/dist/tools', file)),
+    () => require(path.resolve(__dirname, '../../core/dist/tools', file)),
+    () => require(`@doquflow/studio/dist/tools/${file}`),
+    () => require(path.resolve(__dirname, '../../../studio/dist/tools', file)),
+    () => require(path.resolve(__dirname, '../../studio/dist/tools', file)),
+  ];
+  for (const load of candidates) {
+    try {
+      const mod = load() as Record<string, ToolFn>;
+      if (typeof mod[exportName] === 'function') return mod[exportName];
+    } catch { /* try next candidate */ }
+  }
+  throw new Error(`Cannot load tool "${file}" (export: "${exportName}"). Run "npm run build" first.`);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
