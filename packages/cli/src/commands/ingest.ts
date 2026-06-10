@@ -102,11 +102,11 @@ export async function run(options: IngestOptions): Promise<void> {
     info(c.dim(`  Ingesting ${filename}…`));
     try {
       const result = await ingestSource({ project_path: projectPath, source_filename: filename });
-      totalCreated += result.pages_created ?? 0;
-      totalUpdated += result.pages_updated ?? 0;
+      totalCreated += result.pages_created?.length ?? 0;
+      totalUpdated += result.pages_updated?.length ?? 0;
       info(
         `  ${c.green("✓")} ${filename}` +
-        `  ${c.dim(`+${result.pages_created ?? 0} created, ~${result.pages_updated ?? 0} updated`)}`
+        `  ${c.dim(`+${result.pages_created?.length ?? 0} created, ~${result.pages_updated?.length ?? 0} updated`)}`
       );
     } catch (e: any) {
       errored++;
