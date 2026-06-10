@@ -167,8 +167,9 @@ function dispatch(c: string | undefined, r: string[]): void {
   } else if (c === 'update' || c === 'upgrade') {
     import('./commands/update').then(m =>
       m.run({
-        check: hasFlagIn(r, '--check'),
-        force: hasFlagIn(r, '--force'),
+        check:  hasFlagIn(r, '--check'),
+        force:  hasFlagIn(r, '--force'),
+        dryRun: hasFlagIn(r, '--dry-run'),
       })
     );
 
