@@ -25,6 +25,7 @@
   "files": [
     "dist/**",
     "ui-dist/**",
+    "templates/**",
     "README.md"
   ],
   "scripts": {
