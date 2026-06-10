@@ -28,7 +28,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "echo \"No tests in this package\" && exit 0"
   },
   "dependencies": {
     "@doquflow/studio": "2.0.2"

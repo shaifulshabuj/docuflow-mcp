@@ -83,6 +83,6 @@
     "build:ui": "vite build",
     "dev:ui": "vite",
     "start:api": "node dist/api/index.js",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   }
 }
