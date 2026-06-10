@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-06-11
+
+### Fixed
+- **DEF-1 [CRIT]** `docuflow ui` no longer crashes with `ERR_PACKAGE_PATH_NOT_EXPORTED` — added `"./dist/tools/*": "./dist/tools/*.js"` to `@doquflow/studio` exports map so the tool loader in `ui.ts` can reach individual tool modules.
+- **DEF-2 [CRIT]** `docuflow init` now writes a valid MCP server path into Claude Desktop / VS Code configs — `resolveServerBin()` uses `require.resolve("@doquflow/studio/mcp")` (exports-map key) as the primary, with correct node_modules-relative fallbacks. Old fallback pointed to a pre-package-split path that no longer exists.
+- **DEF-3 [HIGH]** `docuflow update --dry-run` now correctly does nothing — flag was not wired from `index.ts` into `update.ts` in v2.0.1.
+- **DEF-4 [HIGH]** `docuflow update` installs to the prefix of the running node binary (`process.execPath`-derived) instead of defaulting to whatever `npm -g` resolves (which could be `.hermes` or an nvm shim prefix).
+- **DEF-5 [MED]** `templates/` directory is now included in the npm `files` list for `@doquflow/cli` — fresh `docuflow init` now copies the full `schema.md`, `index.md`, `log.md` templates instead of minimal stubs.
+- **DEF-6 [MED]** `docuflow ingest` page-count display was always 0 — `IngestResult.pages_created/pages_updated` are `string[]`; now correctly uses `.length`.
+- **DEF-7 [MED]** `docuflow init` no longer writes the absolute project path into `CLAUDE.md` / `AGENTS.md` example snippets — uses `"."` instead, preventing machine-specific paths from polluting generated docs.
+- **DEF-8 [LOW]** MCP handshake version now reads from `package.json` at startup instead of the hardcoded `"2.0.0"` string.
+
+### Added
+- `docuflow init --repair`: detect and rewrite broken MCP server paths in existing Claude Desktop / VS Code / Copilot CLI configs without re-running full init. Useful after upgrading from v2.0.0/2.0.1 where DEF-2 left invalid paths.
+
+### Chore
+- `Dockerfile.dev` + `scripts/dev-container.sh`: Node 22 isolated dev container, modeled on teststop's setup (2026-06-11 security mandate).
+
 ## [2.0.1] - 2026-06-10
 
 ### Changed
