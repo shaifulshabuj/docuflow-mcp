@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-06-11
+
+### Fixed
+- **DEF-4 regression [HIGH]** npm 7+ silently suppresses lifecycle script output, so the `postinstall-check.js` warning introduced in v2.0.3 never reached users. Moved the prefix-mismatch detection into the CLI itself: on every startup (`docuflow <any-command>`), if a newer `@doquflow/cli` exists in a different npm prefix (e.g. nvm vs hermes), a one-line warning is printed to stderr with the fix command. The check is cached for 24 h in `~/.docuflow/.prefix-check.json` so it adds no perceptible startup cost. Postinstall script kept as secondary hint. New files: `packages/cli/src/prefix-utils.ts` (cross-prefix install scanner), `packages/cli/src/prefix-check.ts` (cached startup check).
+- **DEF-12 [HIGH]** `docuflow init --repair` reported ✓ OK even when the registered MCP entry had a cross-prefix mismatch (node binary from prefix A, MCP entry JS from prefix B) or was pointing at an older installed version. Repair now additionally detects: (1) node binary prefix ≠ MCP entry path prefix, (2) registered code version < newest found install. When either condition is true the entry is rewritten to the newest self-consistent installation. Also extends repair coverage to the per-project `.mcp.json` in the current working directory (previously only global configs were touched).
+
+### Added
+- `scripts/verify-packed.sh` dual-prefix detection tests (section 5): simulate an older install in a fake extra prefix and verify the startup warning fires/suppresses correctly. Uses `DOCUFLOW_CHECK_NOW=1` to bypass the TTY guard and `DOCUFLOW_EXTRA_PREFIXES` to inject the fake prefix.
+
+### Chore
+- All four packages bumped to 2.0.4 in lockstep.
+
 ## [2.0.3] - 2026-06-11
 
 ### Fixed
