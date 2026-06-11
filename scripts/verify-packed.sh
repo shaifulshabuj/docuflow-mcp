@@ -85,6 +85,12 @@ if [[ ! "$INSTALLED_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
   echo "  ✗ Version check failed: '$INSTALLED_VER'"; exit 1
 fi
 
+# Tell prefix-check that the PATH-resolved binary IS this packed binary.
+# Prevents direction-2 (DEF-13) shadowing warnings from firing spuriously
+# in section 4 (where TEMP_PREFIX is intentionally not on PATH).
+# Section 5 tests override this per-case as needed.
+export DOCUFLOW_PATH_OVERRIDE_BIN="$DOCUFLOW_BIN"
+
 # ── 4. Per-project checks ─────────────────────────────────────────────────────
 for proj in waymark teststop devloop; do
   PROJ_PATH="$SIBLING_ROOT/$proj"
@@ -163,15 +169,23 @@ for proj in waymark teststop devloop; do
   sleep 1
 done
 
-# ── 5. Dual-prefix detection test (DEF-4 regression gate) ────────────────────
-# Simulates having a different @doquflow/cli version in another npm prefix by
-# creating a fake install directory and injecting it via DOCUFLOW_EXTRA_PREFIXES.
-# Wipes the daily cache before each probe so the check always runs.
+# ── 5. Dual-prefix detection tests (DEF-4 + DEF-13 regression gate) ──────────
+# Warning matrix (both directions must be covered):
+#   5a. Direction 1 negative: current IS newest, PATH OK        → no warning
+#   5b. Direction 1 positive: newer version exists elsewhere     → ⚠ upgrade
+#   5c. Direction 2 positive: older install shadows in PATH      → ⚠ remove shadow
+#   5d. Direction 2 negative: PATH resolves to active binary     → no warning
+#
+# DOCUFLOW_CHECK_NOW=1         — bypass the isTTY guard in non-TTY test contexts.
+# DOCUFLOW_EXTRA_PREFIXES      — inject fake installs into the scanner.
+# DOCUFLOW_PATH_OVERRIDE_BIN   — override the PATH-resolved binary (direction-2 tests).
+# Cache is wiped before every probe so each case starts clean.
 echo ""
 echo "━━━ dual-prefix detection ━━━"
 
 FAKE_PREFIX_OLD="$(mktemp -d /tmp/docuflow-fakeprefix-old-XXXXXX)"
 FAKE_PREFIX_NEW="$(mktemp -d /tmp/docuflow-fakeprefix-new-XXXXXX)"
+FAKE_PREFIX_SHADOW="$(mktemp -d /tmp/docuflow-fakeprefix-shadow-XXXXXX)"
 CACHE_FILE="$HOME/.docuflow/.prefix-check.json"
 
 _fake_install() {
@@ -180,32 +194,56 @@ _fake_install() {
   echo "{\"version\":\"$ver\"}" > "$prefix/lib/node_modules/@doquflow/cli/package.json"
 }
 
-# DOCUFLOW_CHECK_NOW=1 bypasses the isTTY guard so the check runs in non-TTY
-# test contexts. WARN_OUT captures stderr (2>&1) while stdout goes to /dev/null.
-
-# 5a. Current is newest → no warning expected
+# 5a. Direction 1 negative: current is newest, PATH resolves to active binary → no warning
 _fake_install "$FAKE_PREFIX_OLD" "0.1.0"
 rm -f "$CACHE_FILE"
-WARN_OUT=$(DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_OLD" DOCUFLOW_CHECK_NOW=1 \
+WARN_OUT=$(DOCUFLOW_PATH_OVERRIDE_BIN="$DOCUFLOW_BIN" \
+  DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_OLD" DOCUFLOW_CHECK_NOW=1 \
   "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
 if echo "$WARN_OUT" | grep -q "⚠"; then
-  err "dual-prefix: spurious warning when current install is newest"
+  err "5a: spurious warning when current is newest and PATH is clean"
 else
-  ok "dual-prefix: no warning when current is newest (0.1.0 in extra prefix)"
+  ok "5a: no warning when current is newest (0.1.0 in extra prefix, no PATH shadow)"
 fi
 
-# 5b. A newer version exists in another prefix → warning expected
+# 5b. Direction 1 positive: newer version (99.0.0) in another prefix → ⚠ upgrade
 _fake_install "$FAKE_PREFIX_NEW" "99.0.0"
 rm -f "$CACHE_FILE"
-WARN_OUT=$(DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_NEW" DOCUFLOW_CHECK_NOW=1 \
+WARN_OUT=$(DOCUFLOW_PATH_OVERRIDE_BIN="$DOCUFLOW_BIN" \
+  DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_NEW" DOCUFLOW_CHECK_NOW=1 \
   "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
 if echo "$WARN_OUT" | grep -q "⚠"; then
-  ok "dual-prefix: warning fires when newer version (99.0.0) exists in extra prefix"
+  ok "5b: warning fires when newer version (99.0.0) exists in extra prefix"
 else
-  err "dual-prefix: warning did NOT fire (expected ⚠ for 99.0.0 > $INSTALLED_VER)"
+  err "5b: warning did NOT fire (expected ⚠ for 99.0.0 > $INSTALLED_VER)"
 fi
 
-rm -rf "$FAKE_PREFIX_OLD" "$FAKE_PREFIX_NEW"
+# 5c. Direction 2 positive (DEF-13): older install at shadow prefix shadows PATH → ⚠
+# Simulates: user types `docuflow` → resolves to 0.0.1 at FAKE_PREFIX_SHADOW,
+# but the running binary is INSTALLED_VER (newer).  Warning must fire.
+_fake_install "$FAKE_PREFIX_SHADOW" "0.0.1"
+rm -f "$CACHE_FILE"
+WARN_OUT=$(DOCUFLOW_PATH_OVERRIDE_BIN="$FAKE_PREFIX_SHADOW/bin/docuflow" \
+  DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_SHADOW" DOCUFLOW_CHECK_NOW=1 \
+  "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
+if echo "$WARN_OUT" | grep -q "⚠"; then
+  ok "5c: warning fires when older install (0.0.1) shadows active binary in PATH"
+else
+  err "5c: warning did NOT fire (expected ⚠ for PATH-shadow by 0.0.1 < $INSTALLED_VER)"
+fi
+
+# 5d. Direction 2 negative: PATH resolves to active binary itself → no warning
+rm -f "$CACHE_FILE"
+WARN_OUT=$(DOCUFLOW_PATH_OVERRIDE_BIN="$DOCUFLOW_BIN" \
+  DOCUFLOW_CHECK_NOW=1 \
+  "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
+if echo "$WARN_OUT" | grep -q "⚠"; then
+  err "5d: spurious warning when PATH resolves to active binary (no shadowing)"
+else
+  ok "5d: no warning when PATH resolves to active binary"
+fi
+
+rm -rf "$FAKE_PREFIX_OLD" "$FAKE_PREFIX_NEW" "$FAKE_PREFIX_SHADOW"
 rm -f "$CACHE_FILE"
 
 # ── 6. Summary ────────────────────────────────────────────────────────────────

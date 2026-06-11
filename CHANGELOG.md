@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-06-11
+
+### Fixed
+- **DEF-13 [HIGH]** `prefix-check.ts` only warned in one direction — when another prefix held a *newer* version. Running the newer binary (e.g. hermes 2.0.5) while an older install (e.g. nvm 2.0.2) shadowed it in PATH produced no warning, so `docuflow` silently executed the wrong binary. Fixed by adding a second warning direction: if the first `docuflow` in PATH resolves to a different, older binary, a stderr warning names the shadowing install and gives the `npm uninstall` fix command. The warning matrix is now symmetric — whichever binary the user actually runs, they see the relevant message. New helper `pathResolvedBin()` in `prefix-check.ts` (overridable via `DOCUFLOW_PATH_OVERRIDE_BIN` for tests).
+
+### Test
+- Extended `scripts/verify-packed.sh` section 5 from 2 cases to 4: 5a (direction-1 negative — no spurious warning when current is newest and PATH is clean), 5b (direction-1 positive — newer version elsewhere fires upgrade warning), 5c (direction-2 positive — older shadowing binary in PATH fires remove-shadow warning), 5d (direction-2 negative — no warning when PATH resolves to active binary). `DOCUFLOW_PATH_OVERRIDE_BIN` export added after step 3 to suppress direction-2 noise during section-4 per-project checks.
+
+### Chore
+- All four packages bumped to 2.0.5 in lockstep.
+
 ## [2.0.4] - 2026-06-11
 
 ### Fixed
