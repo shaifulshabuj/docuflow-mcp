@@ -163,7 +163,52 @@ for proj in waymark teststop devloop; do
   sleep 1
 done
 
-# ── 5. Summary ────────────────────────────────────────────────────────────────
+# ── 5. Dual-prefix detection test (DEF-4 regression gate) ────────────────────
+# Simulates having a different @doquflow/cli version in another npm prefix by
+# creating a fake install directory and injecting it via DOCUFLOW_EXTRA_PREFIXES.
+# Wipes the daily cache before each probe so the check always runs.
+echo ""
+echo "━━━ dual-prefix detection ━━━"
+
+FAKE_PREFIX_OLD="$(mktemp -d /tmp/docuflow-fakeprefix-old-XXXXXX)"
+FAKE_PREFIX_NEW="$(mktemp -d /tmp/docuflow-fakeprefix-new-XXXXXX)"
+CACHE_FILE="$HOME/.docuflow/.prefix-check.json"
+
+_fake_install() {
+  local prefix="$1" ver="$2"
+  mkdir -p "$prefix/lib/node_modules/@doquflow/cli"
+  echo "{\"version\":\"$ver\"}" > "$prefix/lib/node_modules/@doquflow/cli/package.json"
+}
+
+# DOCUFLOW_CHECK_NOW=1 bypasses the isTTY guard so the check runs in non-TTY
+# test contexts. WARN_OUT captures stderr (2>&1) while stdout goes to /dev/null.
+
+# 5a. Current is newest → no warning expected
+_fake_install "$FAKE_PREFIX_OLD" "0.1.0"
+rm -f "$CACHE_FILE"
+WARN_OUT=$(DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_OLD" DOCUFLOW_CHECK_NOW=1 \
+  "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
+if echo "$WARN_OUT" | grep -q "⚠"; then
+  err "dual-prefix: spurious warning when current install is newest"
+else
+  ok "dual-prefix: no warning when current is newest (0.1.0 in extra prefix)"
+fi
+
+# 5b. A newer version exists in another prefix → warning expected
+_fake_install "$FAKE_PREFIX_NEW" "99.0.0"
+rm -f "$CACHE_FILE"
+WARN_OUT=$(DOCUFLOW_EXTRA_PREFIXES="$FAKE_PREFIX_NEW" DOCUFLOW_CHECK_NOW=1 \
+  "$DOCUFLOW_BIN" status 2>&1 >/dev/null) || true
+if echo "$WARN_OUT" | grep -q "⚠"; then
+  ok "dual-prefix: warning fires when newer version (99.0.0) exists in extra prefix"
+else
+  err "dual-prefix: warning did NOT fire (expected ⚠ for 99.0.0 > $INSTALLED_VER)"
+fi
+
+rm -rf "$FAKE_PREFIX_OLD" "$FAKE_PREFIX_NEW"
+rm -f "$CACHE_FILE"
+
+# ── 6. Summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Result: $pass passed  $fail failed  $skip skipped"

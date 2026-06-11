@@ -40,8 +40,9 @@ function currentCliPrefix(): string | null {
  * @param currentVersion  The version string from the running CLI's package.json
  */
 export function runPrefixCheckIfStale(currentVersion: string): void {
-  // Skip in non-interactive contexts (CI, pipes) — warning would be noise
-  if (!process.stdout.isTTY) return;
+  // Skip in non-interactive contexts (CI, pipes) — warning would be noise.
+  // DOCUFLOW_CHECK_NOW=1 bypasses this for tests and explicit manual runs.
+  if (!process.stdout.isTTY && !process.env.DOCUFLOW_CHECK_NOW) return;
 
   try {
     // Read cache — if fresh and version matches, replay the stored warning (or skip)
