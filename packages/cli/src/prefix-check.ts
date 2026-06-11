@@ -1,16 +1,24 @@
 /**
- * DEF-4: On CLI startup, warn (once per day) if a newer @doquflow/cli is installed
- * in a different npm prefix than the currently-running binary.
+ * DEF-4 / DEF-13: On CLI startup, warn (once per day) about cross-prefix mismatches
+ * in either direction so the warning always reaches the actor who can act.
  *
  * npm 7+ suppresses postinstall stdout/stderr, so a postinstall-script warning
- * can never reach the user. This module moves the check into the CLI itself so
- * it is seen on first actual use after a mismatched install.
+ * can never reach the user. This module moves the check into the CLI itself.
  *
- * The check is:
- *   1. Parse the current binary's prefix from process.argv[1]
- *   2. Scan known alternative prefix paths for a @doquflow/cli with a higher version
- *   3. If found, print a one-line stderr warning with the fix command
- *   4. Cache the result to ~/.docuflow/.prefix-check.json for 24h (avoids slowdown)
+ * Two warning directions:
+ *   Direction 1 — running OLD while NEWER exists elsewhere:
+ *     Another prefix has a higher version → user should upgrade.
+ *     Fix: npm install -g @doquflow/cli@latest
+ *
+ *   Direction 2 — running NEW while OLDER shadows PATH (DEF-13):
+ *     The first `docuflow` in PATH resolves to a different, older binary →
+ *     typing `docuflow` silently uses the wrong version.
+ *     Fix: npm uninstall -g @doquflow/cli (in the older prefix's node context)
+ *
+ * The result is cached to ~/.docuflow/.prefix-check.json for 24 h.
+ * DOCUFLOW_CHECK_NOW=1   — bypass the TTY guard (tests, manual runs).
+ * DOCUFLOW_PATH_OVERRIDE_BIN — override the PATH-resolved binary path (tests).
+ * DOCUFLOW_EXTRA_PREFIXES   — inject extra prefixes into the install scan (tests).
  */
 
 import fs from "node:fs";
@@ -34,8 +42,34 @@ function currentCliPrefix(): string | null {
 }
 
 /**
+ * Find the first `docuflow` executable visible in PATH.
+ * Returns null when none is found or on any error.
+ *
+ * DOCUFLOW_PATH_OVERRIDE_BIN replaces the PATH scan entirely (test escape hatch).
+ */
+function pathResolvedBin(): string | null {
+  if (process.env.DOCUFLOW_PATH_OVERRIDE_BIN) {
+    return process.env.DOCUFLOW_PATH_OVERRIDE_BIN;
+  }
+  const dirs = (process.env.PATH ?? "").split(path.delimiter);
+  for (const dir of dirs) {
+    if (!dir) continue;
+    const candidate = path.join(dir, "docuflow");
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return fs.realpathSync(candidate);
+    } catch { /* not in this dir */ }
+  }
+  return null;
+}
+
+/**
  * Run the dual-prefix check if the cache is stale or missing.
  * Never throws — startup must never be blocked.
+ *
+ * Warning matrix (both directions checked; first match wins):
+ *   D1: another prefix has NEWER version  → "upgrade" message
+ *   D2: PATH resolves to OLDER binary      → "remove shadow" message
  *
  * @param currentVersion  The version string from the running CLI's package.json
  */
@@ -68,6 +102,7 @@ export function runPrefixCheckIfStale(currentVersion: string): void {
     const allInstalls = findInstallsSync(extras);
     let warnMsg: string | undefined;
 
+    // Direction 1: another prefix holds a NEWER version → user is running stale
     for (const install of allInstalls) {
       if (path.resolve(install.prefix) === path.resolve(myPrefix)) continue;
       if (semverGt(install.version, currentVersion)) {
@@ -77,6 +112,27 @@ export function runPrefixCheckIfStale(currentVersion: string): void {
           ` but you are running ${currentVersion}.` +
           `  Fix: npm install -g @doquflow/cli@latest`;
         break;
+      }
+    }
+
+    // Direction 2 (DEF-13): an OLDER install at a PATH-earlier prefix shadows this binary.
+    // "Shadow" = what the user types as `docuflow` resolves to a different, older binary.
+    if (!warnMsg) {
+      const myBin = path.resolve(path.join(myPrefix, "bin", "docuflow"));
+      const pathBin = pathResolvedBin();
+      if (pathBin && path.resolve(pathBin) !== myBin) {
+        // Derive shadowing install's prefix: binary lives at <prefix>/bin/docuflow
+        const shadowPrefix = path.dirname(path.dirname(path.resolve(pathBin)));
+        const shadowInstall = allInstalls.find(
+          i => path.resolve(i.prefix) === path.resolve(shadowPrefix),
+        );
+        if (shadowInstall && semverGt(currentVersion, shadowInstall.version)) {
+          const shortShadow = shadowInstall.prefix.replace(os.homedir(), "~");
+          warnMsg =
+            `⚠️  docuflow ${shadowInstall.version} at ${shortShadow}` +
+            ` shadows this install (${currentVersion}) in your PATH.` +
+            `  Fix: npm uninstall -g @doquflow/cli  (run from the ${shortShadow} node context)`;
+        }
       }
     }
 
