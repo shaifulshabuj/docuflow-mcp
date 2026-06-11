@@ -5,6 +5,14 @@ const { version } = require('../package.json') as { version: string };
 const args = process.argv.slice(2);
 const [cmd, ...rest] = args;
 
+// DEF-4: warn once per day if a newer @doquflow/cli exists in another npm prefix.
+// Skipped for --version / -v (scripted callers) and non-TTY environments.
+if (cmd !== '--version' && cmd !== '-v') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  (require('./prefix-check') as { runPrefixCheckIfStale: (v: string) => void })
+    .runPrefixCheckIfStale(version);
+}
+
 // ── Simple arg parser ────────────────────────────────────────────────────────
 function hasFlag(...flags: string[]): boolean {
   return flags.some(f => rest.includes(f));

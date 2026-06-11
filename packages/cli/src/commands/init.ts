@@ -3,6 +3,12 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { run as runSuggest } from "./suggest";
+import {
+  findInstallsSync,
+  getMcpEntryPrefix,
+  getInstalledCliVersion,
+  semverGt,
+} from "../prefix-utils";
 
 // ── Global project registry ───────────────────────────────────────────────────
 // ~/.docuflow/projects.json  — written by `docuflow init` so the UI can always
@@ -289,21 +295,74 @@ export interface RepairResult {
   skipped: string[];
 }
 
+/** Entry structure shared by all MCP config formats we handle. */
+interface McpEntry {
+  command?: string;
+  args?: unknown[];
+}
+
 /**
- * Detect and repair broken MCP server paths in Claude Desktop / VS Code / Copilot configs.
- * A path is "broken" when the config entry exists but the recorded binary path does not.
+ * Detect and repair MCP server registrations in global and per-project configs.
+ *
+ * DEF-12: Beyond checking that the registered file exists, also detect:
+ *   1. Cross-prefix mismatch — node binary prefix ≠ MCP entry path prefix
+ *   2. Stale version     — registered code is older than the newest installed
+ *
+ * Covers: Claude Desktop global, VS Code global, Copilot CLI global,
+ *         and .mcp.json in the current working directory (per-project).
  */
 export async function repairMcpConfigs(): Promise<RepairResult> {
-  const serverBin = resolveServerBin();
-  const nodeBin = process.execPath;
-  const repaired: string[] = [];
+  // Find the best (newest, self-consistent) installation to target
+  const allInstalls = findInstallsSync();
+  const bestInstall = allInstalls[0]; // sorted newest-first by findInstallsSync
+
+  // Fall back to the running process if no external installs found
+  const targetNodeBin  = bestInstall?.nodeBin  ?? process.execPath;
+  const targetServerBin = bestInstall?.serverBin ?? resolveServerBin();
+  const targetVersion  = bestInstall?.version  ?? "unknown";
+
+  const repaired:   string[] = [];
   const already_ok: string[] = [];
-  const skipped: string[] = [];
+  const skipped:    string[] = [];
+
+  /**
+   * Determine whether an existing entry needs repair.
+   * Returns a reason string if repair is needed, undefined if it is clean.
+   */
+  function repairReason(entry: McpEntry): string | undefined {
+    const recorded = Array.isArray(entry.args) ? (entry.args[0] as string | undefined) : undefined;
+
+    // 1. Missing / deleted file
+    if (!recorded || !fs.existsSync(recorded)) {
+      return `missing file (${recorded ?? "no args[0]"})`;
+    }
+
+    // 2. Cross-prefix mismatch: node binary prefix ≠ MCP entry path prefix
+    const registeredNodeBin = entry.command;
+    if (registeredNodeBin) {
+      const nodeBinPrefix  = path.dirname(path.dirname(registeredNodeBin));
+      const mcpEntryPrefix = getMcpEntryPrefix(recorded);
+      if (
+        mcpEntryPrefix &&
+        path.resolve(nodeBinPrefix) !== path.resolve(mcpEntryPrefix)
+      ) {
+        return `cross-prefix (node: ${nodeBinPrefix} ≠ entry: ${mcpEntryPrefix})`;
+      }
+    }
+
+    // 3. Stale version: registered install is older than newest found
+    const registeredVersion = getInstalledCliVersion(recorded);
+    if (registeredVersion && semverGt(targetVersion, registeredVersion)) {
+      return `stale version (${registeredVersion} → ${targetVersion})`;
+    }
+
+    return undefined; // clean
+  }
 
   async function checkAndRepairJson(
     configPath: string,
     label: string,
-    getEntry: (cfg: Record<string, unknown>) => { args?: unknown[] } | undefined,
+    getEntry: (cfg: Record<string, unknown>) => McpEntry | undefined,
     writeEntry: (cfg: Record<string, unknown>) => void,
   ): Promise<void> {
     try {
@@ -311,44 +370,79 @@ export async function repairMcpConfigs(): Promise<RepairResult> {
       const cfg = JSON.parse(raw) as Record<string, unknown>;
       const entry = getEntry(cfg);
       if (!entry) { skipped.push(`${label} — no docuflow entry`); return; }
-      const recorded = Array.isArray(entry.args) ? (entry.args[0] as string | undefined) : undefined;
-      if (recorded && fs.existsSync(recorded)) { already_ok.push(label); return; }
+
+      const reason = repairReason(entry);
+      if (!reason) { already_ok.push(label); return; }
+
       writeEntry(cfg);
       await fsp.writeFile(configPath, JSON.stringify(cfg, null, 2) + "\n", "utf8");
-      repaired.push(`${label} (was: ${recorded ?? "missing"} → ${serverBin})`);
+      repaired.push(`${label} (${reason} → ${targetServerBin})`);
     } catch { skipped.push(`${label} — not found or unreadable`); }
   }
 
-  // Claude Desktop
+  // ── Global: Claude Desktop ──────────────────────────────────────────────────
   await checkAndRepairJson(
     getClaudeDesktopConfigPath(),
     "Claude Desktop",
-    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as McpEntry | undefined),
     (cfg) => {
       if (!cfg.mcpServers) cfg.mcpServers = {};
-      (cfg.mcpServers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin] };
+      (cfg.mcpServers as Record<string, unknown>).docuflow = {
+        command: targetNodeBin,
+        args: [targetServerBin],
+      };
     },
   );
 
-  // VS Code user MCP
+  // ── Global: VS Code user MCP ───────────────────────────────────────────────
   await checkAndRepairJson(
     getVSCodeMcpConfigPath(),
     "VS Code",
-    (cfg) => ((cfg.servers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => ((cfg.servers as Record<string, unknown> | undefined)?.docuflow as McpEntry | undefined),
     (cfg) => {
       if (!cfg.servers) cfg.servers = {};
-      (cfg.servers as Record<string, unknown>).docuflow = { command: nodeBin, args: [serverBin], type: "stdio" };
+      (cfg.servers as Record<string, unknown>).docuflow = {
+        command: targetNodeBin,
+        args: [targetServerBin],
+        type: "stdio",
+      };
     },
   );
 
-  // Copilot CLI
+  // ── Global: Copilot CLI ────────────────────────────────────────────────────
   await checkAndRepairJson(
     getCopilotCliMcpConfigPath(),
     "Copilot CLI",
-    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as { args?: unknown[] } | undefined),
+    (cfg) => ((cfg.mcpServers as Record<string, unknown> | undefined)?.docuflow as McpEntry | undefined),
     (cfg) => {
       if (!cfg.mcpServers) cfg.mcpServers = {};
-      (cfg.mcpServers as Record<string, unknown>).docuflow = { type: "local", command: nodeBin, args: [serverBin], tools: ["*"] };
+      (cfg.mcpServers as Record<string, unknown>).docuflow = {
+        type: "local",
+        command: targetNodeBin,
+        args: [targetServerBin],
+        tools: ["*"],
+      };
+    },
+  );
+
+  // ── Per-project: .mcp.json in current working directory ───────────────────
+  const localMcpPath = path.join(process.cwd(), ".mcp.json");
+  await checkAndRepairJson(
+    localMcpPath,
+    ".mcp.json (project)",
+    (cfg) => {
+      const servers = (cfg.mcpServers ?? cfg.servers) as Record<string, unknown> | undefined;
+      return servers?.docuflow as McpEntry | undefined;
+    },
+    (cfg) => {
+      // Preserve whichever key the file already uses (mcpServers vs servers)
+      const key = cfg.mcpServers !== undefined ? "mcpServers" : "servers";
+      if (!cfg[key]) cfg[key] = {};
+      (cfg[key] as Record<string, unknown>).docuflow = {
+        type: "stdio",
+        command: targetNodeBin,
+        args: [targetServerBin],
+      };
     },
   );
 
