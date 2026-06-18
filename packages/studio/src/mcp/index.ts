@@ -289,14 +289,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "context",
       description:
-        "Context-as-a-Service stub. Builds a tiny in-memory index of a directory to answer where a concept or term (X) is located.",
+        "Context-as-a-Service tool. Persistent local SQLite index using FTS5 to answer where a concept or term (X) is located. Use 'index' operation first, then 'query'.",
       inputSchema: {
         type: "object",
         properties: {
+          operation: { type: "string", enum: ["index", "query"], description: "The operation to perform (default: query)." },
           directory: { type: "string", description: "Directory to index and search." },
-          query: { type: "string", description: "The term or concept to search for." },
+          query: { type: "string", description: "The term or concept to search for (required for query)." },
         },
-        required: ["directory", "query"],
+        required: ["directory"],
       },
     },
   ],
@@ -337,7 +338,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     } else if (name === "generate_dependency_graph") {
       result = await generateDependencyGraph(args as { project_path: string; extensions?: string[]; focus?: string });
     } else if (name === "context") {
-      result = await getContext(args as { directory: string; query: string });
+      result = await getContext(args as { operation?: "index" | "query"; directory: string; query?: string });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
