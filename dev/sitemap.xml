@@ -2,42 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/changelog/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/concepts/architecture/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/concepts/llm-wiki-pattern/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/getting-started/installation/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/getting-started/quickstart/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/guides/agent-integration/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/reference/cli/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
+    </url>
+    <url>
+         <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/reference/context/</loc>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/reference/mcp-tools/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
     <url>
          <loc>https://shaifulshabuj.github.io/docuflow-mcp/stable/reference/web-ui/</loc>
-         <lastmod>2026-05-21</lastmod>
+         <lastmod>2026-06-18</lastmod>
     </url>
 </urlset>
