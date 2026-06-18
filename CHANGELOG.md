@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **`context` Context-as-a-Service tool**: A new tool registering under `@doquflow/studio` featuring persistent local SQLite FTS5 indexing with `index` and `query` operations. Relies on the new `better-sqlite3` dependency.
+
 ## [2.0.5] - 2026-06-11
 
 ### Fixed

@@ -93,6 +93,7 @@ nav:
   - Reference:
     - CLI Commands: reference/cli.md
     - MCP Tools: reference/mcp-tools.md
+    - Context Service: reference/context.md
     - Web UI: reference/web-ui.md
   - Guides:
     - Agent Integration: guides/agent-integration.md
