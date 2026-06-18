@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-Docuflow exposes **15 MCP tools** accessible from any MCP-compatible agent (Claude, VS Code Copilot, Cursor).
+Docuflow exposes **16 MCP tools** accessible from any MCP-compatible agent (Claude, VS Code Copilot, Cursor).
 
 All tools share a common pattern: `project_path` points to the root of the project containing the `.docuflow/` directory.
 
@@ -79,7 +79,7 @@ Main Q&A interface. Searches the wiki and synthesises a markdown answer.
 
 ---
 
-## Advanced tools (11) — `@doquflow/studio`
+## Advanced tools (12) — `@doquflow/studio`
 
 ### `list_modules`
 
@@ -250,6 +250,28 @@ Build an import and shared-resource graph for a project.
 ```
 
 **Returns:** `nodes`, `edges`, `shared_tables`, `shared_endpoints`, `most_connected` (top-10 by degree).
+
+---
+
+### `context`
+
+Persistent local SQLite FTS5 index for term/concept location.
+
+```json
+{
+  "directory": "/path/to/project",
+  "operation": "query",
+  "query": "authentication"
+}
+```
+
+**Returns:** Index status message or rank-ordered search matches with preview snippets.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `directory` | ✅ | The directory to index or query |
+| `operation` | ❌ | The operation to perform: `index` or `query` (default: `query`) |
+| `query` | ❌ | The search term or concept (required when operation is `query`) |
 
 ---
 
