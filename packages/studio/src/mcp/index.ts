@@ -20,6 +20,7 @@ import { lintWiki } from "../tools/lint-wiki";
 import { getSchemataGuidance } from "../tools/get-schema-guidance";
 import { previewGeneration } from "../tools/preview-generation";
 import { generateDependencyGraph } from "../tools/generate-dependency-graph";
+import { getContext } from "../tools/context";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: serverVersion } = require("../../package.json") as { version: string };
@@ -285,6 +286,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path"],
       },
     },
+    {
+      name: "context",
+      description:
+        "Context-as-a-Service stub. Builds a tiny in-memory index of a directory to answer where a concept or term (X) is located.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          directory: { type: "string", description: "Directory to index and search." },
+          query: { type: "string", description: "The term or concept to search for." },
+        },
+        required: ["directory", "query"],
+      },
+    },
   ],
 }));
 
@@ -322,6 +336,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await previewGeneration(args as { tool_name: string; project_path: string; params: Record<string, any> });
     } else if (name === "generate_dependency_graph") {
       result = await generateDependencyGraph(args as { project_path: string; extensions?: string[]; focus?: string });
+    } else if (name === "context") {
+      result = await getContext(args as { directory: string; query: string });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
