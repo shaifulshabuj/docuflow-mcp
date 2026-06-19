@@ -289,13 +289,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "context",
       description:
-        "Context-as-a-Service tool. Persistent local SQLite index using FTS5 to answer where a concept or term (X) is located. Use 'index' operation first, then 'query'.",
+        "Context-as-a-Service tool. Persistent local SQLite index using FTS5 (lexical) and sqlite-vec (semantic) search. Use 'index' operation first, then 'query'. Supports lexical, semantic, and hybrid query modes.",
       inputSchema: {
         type: "object",
         properties: {
           operation: { type: "string", enum: ["index", "query"], description: "The operation to perform (default: query)." },
           directory: { type: "string", description: "Directory to index and search." },
           query: { type: "string", description: "The term or concept to search for (required for query)." },
+          mode: { type: "string", enum: ["lexical", "semantic", "hybrid"], description: "Search mode (default: lexical). 'semantic' uses vector embeddings, 'hybrid' combines both." },
         },
         required: ["directory"],
       },
@@ -338,7 +339,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     } else if (name === "generate_dependency_graph") {
       result = await generateDependencyGraph(args as { project_path: string; extensions?: string[]; focus?: string });
     } else if (name === "context") {
-      result = await getContext(args as { operation?: "index" | "query"; directory: string; query?: string });
+      result = await getContext(args as { operation?: "index" | "query"; directory: string; query?: string; mode?: "semantic" | "lexical" | "hybrid" });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
