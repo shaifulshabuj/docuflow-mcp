@@ -6,8 +6,16 @@ All notable changes to Docuflow are documented here. Format: [Keep a Changelog](
 
 ## [Unreleased]
 
+### Added
+- **`context` tool: semantic and hybrid search modes** — the `context` tool now supports a `mode` parameter (`lexical`, `semantic`, `hybrid`). Semantic search uses local vector embeddings via `@xenova/transformers` (all-MiniLM-L6-v2) and `sqlite-vec` for cosine similarity retrieval. Hybrid mode combines FTS5 keyword results with vector results. Default remains `lexical` (backward-compatible). No cloud API key required — fully local-first.
+
 ### Changed
 - `docuflow init` now runs `docuflow suggest` at the end — new users see domain-aware next steps immediately after setup
+
+### Fixed
+- **`context` hybrid fallback** — hybrid mode returns lexical results with a `warning` field when embeddings are unavailable, instead of discarding already-computed FTS5 results.
+- **`context` old-database compatibility** — querying a v2.1.0 FTS5-only database with `semantic` or `hybrid` mode no longer crashes; falls back gracefully.
+- **`context` MCP schema** — the `mode` parameter is now exposed in the MCP `inputSchema` so clients can discover and use it.
 
 ---
 
