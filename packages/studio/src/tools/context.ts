@@ -157,6 +157,14 @@ export async function getContext(args: {
           const transformers = await import("@xenova/transformers");
           extractor = await transformers.pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
         } catch(e: any) {
+          if (mode === "hybrid") {
+            return {
+              message: `Found ${results.length} files matching '${args.query}' in '${args.directory}'`,
+              matches: results,
+              warning: "Embeddings model not available; returning lexical results only.",
+              status: "success",
+            };
+          }
           return { error: "Embeddings model not available: " + e.message, status: "error" };
         }
         
