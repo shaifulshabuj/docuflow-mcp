@@ -152,6 +152,19 @@ export async function getContext(args: {
       }
 
       if (mode === "semantic" || mode === "hybrid") {
+        const hasVec = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vec_docs'").get();
+        if (!hasVec) {
+          if (mode === "semantic") {
+            return { error: "No vector index found. Re-run the 'index' operation to enable semantic search.", status: "error" };
+          }
+          return {
+            message: `Found ${results.length} files matching '${args.query}' in '${args.directory}'`,
+            matches: results,
+            warning: "No vector index found; returning lexical results only. Re-run 'index' to enable semantic search.",
+            status: "success",
+          };
+        }
+
         let extractor: any;
         try {
           const transformers = await import("@xenova/transformers");
@@ -167,10 +180,10 @@ export async function getContext(args: {
           }
           return { error: "Embeddings model not available: " + e.message, status: "error" };
         }
-        
+
         const output = await extractor(args.query, { pooling: "mean", normalize: true });
         const queryEmbedding = new Float32Array(output.data);
-        
+
         const stmt = db.prepare(`
           SELECT d.path, substr(d.content, 1, 200) as snippet, vec_distance_cosine(v.embedding, ?) as distance
           FROM vec_docs v
@@ -180,11 +193,10 @@ export async function getContext(args: {
           ORDER BY distance
         `);
         const vecResults = stmt.all(queryEmbedding, queryEmbedding);
-        
+
         if (mode === "semantic") {
           results = vecResults;
         } else if (mode === "hybrid") {
-          // simple combination (just append vectors that aren't already there)
           const existingPaths = new Set(results.map(r => r.path));
           for (const vr of vecResults) {
             if (!existingPaths.has(vr.path)) {
