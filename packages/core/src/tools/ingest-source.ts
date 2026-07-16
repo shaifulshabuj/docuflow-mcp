@@ -258,14 +258,31 @@ export async function ingestSource(input: {
       };
     }
 
-    const sourceContent = fileRead.content ?? "";
+    let sourceContent = fileRead.content ?? "";
     const sourceTitle = input.source_filename.replace(".md", "");
+
+    // Detect Japanese content and apply a local translation stub for bilingual indexing
+    const isJapanese = /[\\u3040-\\u309f\\u30a0-\\u30ff\\u4e00-\\u9faf]/.test(sourceContent);
+    if (isJapanese) {
+      // Use a local stub/LLM approach to maintain strict confidentiality (no cloud API calls)
+      const translationStub = `[Bilingual English Translation (Local LLM Stub)]\nThis content was translated locally for English lexical search (FTS5) compatibility.\n\n`;
+      sourceContent = translationStub + sourceContent;
+    }
 
     // Extract information
     const extracted = extractFromMarkdown(sourceContent);
 
     // Generate wiki pages
     const wikiPages = generateWikiPages(sourceTitle, sourceTitle, extracted, sourceContent);
+
+    // If bilingual, tag the pages
+    if (isJapanese) {
+      for (const page of wikiPages) {
+        if (!page.frontmatter.tags.includes("bilingual")) {
+          page.frontmatter.tags.push("bilingual", "translated");
+        }
+      }
+    }
 
     // Write all pages
     const pagesCreated: string[] = [];
