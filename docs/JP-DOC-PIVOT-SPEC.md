@@ -53,15 +53,16 @@
 - The retrieved information directly enables the completion of a real engineering task (e.g., a bug fix or feature addition) on that subsystem.
 **Timeframe:** Within 3 weeks from the start of implementation.
 
-## 4. NEEDS-DECISION Forks
+## 4. RESOLVED Forks (by shaiful, 2026-07-16)
 
 *   **(a) Internal workplace tool vs. eventual public product:**
-    *   If this is strictly an internal tool, the MVP can rely heavily on the owner's manual work (like manually converting Excel to MD, or using external translation scripts). If it's a public product, automatic ingestion of `.xlsx` and built-in translation become critical blocking features.
+    *   **Decision: Strictly an internal workplace tool.** The MVP can rely on manual conversions/scripts.
 *   **(b) Japanese-first vs. bilingual-first design:**
-    *   Should the LLM Wiki (`.docuflow/wiki/`) be stored in Japanese to preserve original nuances, or translated to English to maximize accessibility? A Japanese-first design relies heavily on the agent to translate during the `query_wiki` synthesis step, whereas a bilingual-first design pays the translation cost upfront at ingestion.
+    *   **Decision: Bilingual-first.** Pays translation cost upfront at ingestion for maximum accessibility.
 *   **(c) On-premises / local-model inference vs. cloud APIs:**
-    *   Given workplace documents are confidential, is a fully local inference path required?
-    *   *Tradeoff:* The current `context` tool uses local `sqlite-vec` and `@xenova/transformers` which guarantees privacy. However, the `ingest_source` and `synthesize_answer` tools typically rely on the agent's LLM (e.g., Claude via API). If strict confidentiality requires local LLMs for synthesis (like Llama 3 via Ollama), we sacrifice reasoning capability and increase engineering cost, but guarantee zero data leakage.
+    *   **Decision: Fully local on-prem inference only.** Guarantees zero data leakage but sacrifices some reasoning/speed.
+*   **(d) G2 Validation:**
+    *   **Decision: GO.** Explicit approval granted to proceed with real documents under strict confidentiality.
 
 ## 5. Risks + Open Questions
 
