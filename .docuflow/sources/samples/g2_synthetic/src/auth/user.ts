@@ -5,6 +5,7 @@ export interface User {
     isActive: boolean;
     lastLoginAt?: Date;
     roles: string[]; // Drift: Code uses roles array, docs say single string role
+    mfaEnabled: boolean; // Intentional drift: new field added in code but not in table specs
 }
 
 export class AuthService {
