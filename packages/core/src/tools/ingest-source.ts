@@ -17,6 +17,44 @@ interface ExtractionOutput {
   relationships: Array<{ from: string; to: string; relation: string }>;
 }
 
+export type TranslateToEnglish = (source: string) => Promise<string> | string;
+
+export interface IngestDependencies {
+  /**
+   * Local-only translation adapter. Production callers can connect this to an
+   * on-prem LLM; tests and offline installations can provide a deterministic
+   * stub. No source text is sent to a remote service by DocuFlow itself.
+   */
+  translateToEnglish?: TranslateToEnglish;
+}
+
+/** Detect Japanese kana and CJK ideographs without matching ordinary ASCII. */
+export function containsJapaneseText(content: string): boolean {
+  return /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(content);
+}
+
+/**
+ * Safe offline fallback used when no local LLM adapter is configured.
+ * It intentionally preserves Latin identifiers already present in the source,
+ * which keeps product names and code symbols searchable while making it clear
+ * that callers should supply a real local translator for natural-language
+ * English recall.
+ */
+function localTranslationStub(source: string): string {
+  const retainedTerms = Array.from(
+    new Set(source.match(/[A-Za-z][A-Za-z0-9_.:/-]*/g) ?? [])
+  ).slice(0, 100);
+  const retainedLine = retainedTerms.length > 0
+    ? `Retained source terms: ${retainedTerms.join(" ")}`
+    : "No Latin source terms were available to retain.";
+
+  return [
+    "Local English translation stub.",
+    "Configure an on-prem translation adapter for full Japanese-to-English lexical coverage.",
+    retainedLine,
+  ].join("\n\n");
+}
+
 /**
  * Find the first paragraph in the source that mentions the given name.
  * Returns cleaned text (stripped of markdown syntax), up to 400 chars.
@@ -157,7 +195,8 @@ function generateWikiPages(
   sourceId: string,
   sourceTitle: string,
   extracted: ExtractionOutput,
-  sourceContent: string
+  sourceContent: string,
+  bilingualSource?: { english: string; japanese: string }
 ): WikiPage[] {
   const now = new Date().toISOString();
   const pages: WikiPage[] = [];
@@ -168,7 +207,14 @@ function generateWikiPages(
     id: summaryId,
     title: `Source: ${sourceTitle}`,
     category: "synthesis",
-    content: `# ${sourceTitle}\n\n${extracted.summary}\n\n## Key Entities\n\n${extracted.entities.map((e) => `- **${e.name}** (${e.type})`).join("\n")}`,
+    content: [
+      `# ${sourceTitle}`,
+      extracted.summary,
+      `## Key Entities\n\n${extracted.entities.map((e) => `- **${e.name}** (${e.type})`).join("\n")}`,
+      bilingualSource
+        ? `## English Translation\n\n${bilingualSource.english}\n\n## Original Japanese\n\n${bilingualSource.japanese}`
+        : "",
+    ].filter(Boolean).join("\n\n"),
     frontmatter: {
       created_at: now,
       updated_at: now,
@@ -236,7 +282,7 @@ function generateWikiPages(
 export async function ingestSource(input: {
   project_path: string;
   source_filename: string;
-}): Promise<IngestResult> {
+}, dependencies: IngestDependencies = {}): Promise<IngestResult> {
   try {
     const projectPath = path.resolve(input.project_path);
     const docuDir = path.join(projectPath, ".docuflow");
@@ -258,22 +304,36 @@ export async function ingestSource(input: {
       };
     }
 
-    let sourceContent = fileRead.content ?? "";
+    const originalSourceContent = fileRead.content ?? "";
+    let sourceContent = originalSourceContent;
     const sourceTitle = input.source_filename.replace(".md", "");
 
-    // Detect Japanese content and apply a local translation stub for bilingual indexing
-    const isJapanese = /[\\u3040-\\u309f\\u30a0-\\u30ff\\u4e00-\\u9faf]/.test(sourceContent);
+    // Translate before extraction so English headings, entities, and concepts
+    // become first-class lexical-search terms in the generated wiki pages.
+    const isJapanese = containsJapaneseText(originalSourceContent);
+    let englishTranslation: string | undefined;
     if (isJapanese) {
-      // Use a local stub/LLM approach to maintain strict confidentiality (no cloud API calls)
-      const translationStub = `[Bilingual English Translation (Local LLM Stub)]\nThis content was translated locally for English lexical search (FTS5) compatibility.\n\n`;
-      sourceContent = translationStub + sourceContent;
+      const translateToEnglish = dependencies.translateToEnglish ?? localTranslationStub;
+      englishTranslation = (await translateToEnglish(originalSourceContent)).trim();
+      if (!englishTranslation) {
+        throw new Error("Local Japanese-to-English translator returned empty content");
+      }
+      sourceContent = englishTranslation;
     }
 
     // Extract information
     const extracted = extractFromMarkdown(sourceContent);
 
     // Generate wiki pages
-    const wikiPages = generateWikiPages(sourceTitle, sourceTitle, extracted, sourceContent);
+    const wikiPages = generateWikiPages(
+      sourceTitle,
+      sourceTitle,
+      extracted,
+      sourceContent,
+      englishTranslation
+        ? { english: englishTranslation, japanese: originalSourceContent }
+        : undefined
+    );
 
     // If bilingual, tag the pages
     if (isJapanese) {
