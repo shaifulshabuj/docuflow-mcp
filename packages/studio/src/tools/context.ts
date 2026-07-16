@@ -76,7 +76,7 @@ export async function getContext(args: {
       let extractor: any;
       try {
         const transformers = await import("@xenova/transformers");
-        extractor = await transformers.pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+        extractor = await transformers.pipeline("feature-extraction", "Xenova/multilingual-e5-small");
       } catch (e) {
         console.warn("Failed to load @xenova/transformers for embeddings. Semantic search won't be available.");
       }
@@ -94,7 +94,7 @@ export async function getContext(args: {
           if (extractor) {
             try {
               // Embed up to 1000 chars to avoid token limits on large files
-              const textToEmbed = file.content.slice(0, 1000);
+              const textToEmbed = "passage: " + file.content.slice(0, 1000);
               const output = await extractor(textToEmbed, { pooling: "mean", normalize: true });
               const embeddingArray = new Float32Array(output.data);
               
@@ -168,7 +168,7 @@ export async function getContext(args: {
         let extractor: any;
         try {
           const transformers = await import("@xenova/transformers");
-          extractor = await transformers.pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+          extractor = await transformers.pipeline("feature-extraction", "Xenova/multilingual-e5-small");
         } catch(e: any) {
           if (mode === "hybrid") {
             return {
@@ -181,7 +181,7 @@ export async function getContext(args: {
           return { error: "Embeddings model not available: " + e.message, status: "error" };
         }
 
-        const output = await extractor(args.query, { pooling: "mean", normalize: true });
+        const output = await extractor("query: " + args.query, { pooling: "mean", normalize: true });
         const queryEmbedding = new Float32Array(output.data);
 
         const stmt = db.prepare(`
