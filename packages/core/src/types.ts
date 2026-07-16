@@ -79,3 +79,18 @@ export interface LintResult {
   };
   recommendations: string[];
 }
+
+export interface DriftDiscrepancy {
+  field: string;
+  doc_value?: string;
+  code_value?: string;
+  type: "missing_in_doc" | "missing_in_code" | "type_mismatch" | "contradiction";
+  description: string;
+}
+
+export interface DriftReport {
+  doc_path: string;
+  source_paths: string[];
+  is_stale: boolean;
+  discrepancies: DriftDiscrepancy[];
+}

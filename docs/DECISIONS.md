@@ -22,3 +22,18 @@ To maintain strict data confidentiality and avoid reliance on external services,
 - **Decision**: Swap the embedding model in `packages/studio/src/tools/context.ts` from `"Xenova/all-MiniLM-L6-v2"` to `"Xenova/multilingual-e5-small"`.
 - **Reasoning**: `multilingual-e5-small` supports multilingual queries effectively and satisfies local deployment constraints. Its output dimension is 384, matching `all-MiniLM-L6-v2`, allowing the switch without needing to change the `sqlite-vec` database schema.
 - **Implementation Details**: The `e5` family of models requires prefixes to differentiate the query and passage contexts for optimal retrieval quality. We implemented this by prepending `"passage: "` to documents during indexing and `"query: "` to queries at query time in `context.ts`.
+
+## Code-to-Doc Drift Detection
+
+**Context**
+The founding principle of DocuFlow is: "SOURCE CODE as the ONLY truth; all other artifacts become stale." As code evolves, documentation naturally diverges unless continuously checked. We needed a mechanism to verify the facts written in markdown documentation against the actual source code implementations.
+
+**Decision**
+We implemented a core `detect_drift` MCP tool that accepts a documentation page and a set of related source code files. The tool extracts "facts" from both and uses a local LLM or heuristic stub to compare them, generating a structured `DriftReport` identifying specific discrepancies (missing fields, type mismatches, and contradictions). 
+
+Similar to the ingestion pipeline, `detect_drift` accepts an injected `AnalyzeDrift` adapter to maintain data confidentiality, avoiding remote LLM calls by default. A deterministic offline stub is provided for tests and environments without local LLMs, which falls back to basic heuristic scanning.
+
+**Consequences**
+- Drift detection runs entirely offline, preserving the security of source code.
+- Discrepancies are structurally reported, allowing automated pipelines to flag outdated documentation.
+- The `detect_drift` tool is exposed via MCP in the `@doquflow/studio` and `@doquflow/core` servers, enabling AI agents and IDEs to proactively identify documentation staleness.

@@ -10,6 +10,7 @@ import { readModule } from "./tools/read-module";
 import { ingestSource } from "./tools/ingest-source";
 import { wikiSearch } from "./tools/wiki-search";
 import { queryWiki } from "./tools/query-wiki";
+import { detectDrift } from "./tools/detect-drift";
 
 const server = new Server(
   { name: "docuflow-core", version: "2.0.0" },
@@ -79,6 +80,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path", "question"],
       },
     },
+    {
+      name: "detect_drift",
+      description: "Compare a documentation page against its source code files to identify discrepancies, stale facts, or contradictions.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          doc_path: { type: "string", description: "Path to the documentation page (e.g. .docuflow/sources/...)" },
+          source_paths: { 
+            type: "array", 
+            items: { type: "string" },
+            description: "List of source code paths to compare against." 
+          },
+        },
+        required: ["project_path", "doc_path", "source_paths"],
+      },
+    },
   ],
 }));
 
@@ -94,6 +112,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await wikiSearch(args as { project_path: string; query: string; limit?: number; category?: "entity" | "concept" | "timeline" | "synthesis" });
     } else if (name === "query_wiki") {
       result = await queryWiki(args as { project_path: string; question: string; max_sources?: number });
+    } else if (name === "detect_drift") {
+      result = await detectDrift(args as { project_path: string; doc_path: string; source_paths: string[] });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
