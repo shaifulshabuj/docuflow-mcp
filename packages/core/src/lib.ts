@@ -4,6 +4,7 @@ export { ingestSource } from "./tools/ingest-source";
 export { queryWiki } from "./tools/query-wiki";
 export { wikiSearch } from "./tools/wiki-search";
 export { readModule } from "./tools/read-module";
+export { detectDrift } from "./tools/detect-drift";
 
 // Support module — used by queryWiki and exported so studio can register
 // synthesize_answer as a standalone MCP tool without duplicating the logic:

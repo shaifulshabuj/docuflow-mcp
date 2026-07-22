@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 // 4 core tools from @doquflow/core
-import { readModule, ingestSource, wikiSearch, queryWiki, synthesizeAnswer } from "@doquflow/core/lib";
+import { readModule, ingestSource, wikiSearch, queryWiki, synthesizeAnswer, detectDrift } from "@doquflow/core/lib";
 
 // 11 advanced tools (local)
 import { listModules } from "../tools/list-modules";
@@ -301,6 +301,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["directory"],
       },
     },
+    {
+      name: "detect_drift",
+      description: "Compare a documentation page against its source code files to identify discrepancies, stale facts, or contradictions.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          doc_path: { type: "string", description: "Path to the documentation page (e.g. .docuflow/sources/...)" },
+          source_paths: { 
+            type: "array", 
+            items: { type: "string" },
+            description: "List of source code paths to compare against." 
+          },
+        },
+        required: ["project_path", "doc_path", "source_paths"],
+      },
+    },
   ],
 }));
 
@@ -340,6 +357,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await generateDependencyGraph(args as { project_path: string; extensions?: string[]; focus?: string });
     } else if (name === "context") {
       result = await getContext(args as { operation?: "index" | "query"; directory: string; query?: string; mode?: "semantic" | "lexical" | "hybrid" });
+    } else if (name === "detect_drift") {
+      result = await detectDrift(args as { project_path: string; doc_path: string; source_paths: string[] });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
