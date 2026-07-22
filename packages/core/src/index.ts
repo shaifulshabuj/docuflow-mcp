@@ -12,6 +12,7 @@ import { wikiSearch } from "./tools/wiki-search";
 import { queryWiki } from "./tools/query-wiki";
 import { detectDrift } from "./tools/detect-drift";
 import { queryProject } from "./tools/query_project";
+import { regenerateDoc } from "./tools/regenerate-doc";
 
 const server = new Server(
   { name: "docuflow-core", version: "2.0.0" },
@@ -112,6 +113,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path", "question"],
       },
     },
+    {
+      name: "regenerate_doc",
+      description:
+        "Rewrite a stale document so that its facts perfectly match the provided source code, while preserving original structure.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          doc_path: { type: "string", description: "Path to the document to regenerate (e.g., docs/tables/users_table.md)." },
+          code_paths: {
+            type: "array",
+            items: { type: "string" },
+            description: "Paths to the source files that represent the truth (e.g., ['src/auth/user.ts']).",
+          },
+        },
+        required: ["project_path", "doc_path", "code_paths"],
+      },
+    },
   ],
 }));
 
@@ -131,6 +150,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await detectDrift(args as { project_path: string; doc_path: string; source_paths: string[] });
     } else if (name === "query_project") {
       result = await queryProject(args as { project_path: string; question: string; max_sources?: number });
+    } else if (name === "regenerate_doc") {
+      result = await regenerateDoc(args as { project_path: string; doc_path: string; code_paths: string[] });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }
