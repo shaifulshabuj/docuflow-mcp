@@ -11,6 +11,7 @@ import { ingestSource } from "./tools/ingest-source";
 import { wikiSearch } from "./tools/wiki-search";
 import { queryWiki } from "./tools/query-wiki";
 import { detectDrift } from "./tools/detect-drift";
+import { queryProject } from "./tools/query_project";
 
 const server = new Server(
   { name: "docuflow-core", version: "2.0.0" },
@@ -97,6 +98,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["project_path", "doc_path", "source_paths"],
       },
     },
+    {
+      name: "query_project",
+      description:
+        "Ask a question against both the wiki and the source code. Synthesizes an answer with specific citations from both docs and code files.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          project_path: { type: "string", description: "Root of the project." },
+          question: { type: "string", description: "The question to ask." },
+          max_sources: { type: "number", description: "Optional: max source pages/files to use." },
+        },
+        required: ["project_path", "question"],
+      },
+    },
   ],
 }));
 
@@ -114,6 +129,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await queryWiki(args as { project_path: string; question: string; max_sources?: number });
     } else if (name === "detect_drift") {
       result = await detectDrift(args as { project_path: string; doc_path: string; source_paths: string[] });
+    } else if (name === "query_project") {
+      result = await queryProject(args as { project_path: string; question: string; max_sources?: number });
     } else {
       result = { error: `Unknown tool: ${name}` };
     }

@@ -2,7 +2,7 @@ import path from "node:path";
 import fsp from "node:fs/promises";
 import { safeReadFile } from "../filesystem";
 
-interface SearchResult {
+export interface SearchResult {
   page_id: string;
   title: string;
   category: string;

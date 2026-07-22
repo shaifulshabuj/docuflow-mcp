@@ -2,6 +2,7 @@
 // Core tools (4 MCP-registered tools):
 export { ingestSource } from "./tools/ingest-source";
 export { queryWiki } from "./tools/query-wiki";
+export { queryProject } from "./tools/query_project";
 export { wikiSearch } from "./tools/wiki-search";
 export { readModule } from "./tools/read-module";
 export { detectDrift } from "./tools/detect-drift";
